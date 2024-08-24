@@ -33,7 +33,7 @@ cd mm2-opt
 make all=1
 
 # build optimized alignment with intra cromosomal parallel chaining
-make all=1 par_chain=2 
+make all=1 par_chain_2=1 
 
 # test run
 ./minimap2 -cx asm5 test/MT-human.fa test/MT-orang.fa -o out.paf
