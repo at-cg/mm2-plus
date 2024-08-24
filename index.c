@@ -221,7 +221,7 @@ static void worker_post(void *g, long i, int tid)
 	if (b->a.n == 0) return;
 
 	// sort by minimizer
-	radix_sort_128x(b->a.a, b->a.a + b->a.n);
+	radix_sort_128x(b->a.a, b->a.a + b->a.n); // parallel sorting is not necessary here, embarrassingly parallel
 
 	// count and preallocate
 	for (j = 1, n = 1, n_keys = 0, b->n = 0; j <= b->a.n; ++j) {
@@ -385,6 +385,7 @@ mm_idx_t *mm_idx_gen(mm_bseq_file_t *fp, int w, int k, int b, int flag, int mini
 	pl.mi = mm_idx_init(w, k, b, flag);
 
 	kt_pipeline(n_threads < 3? n_threads : 3, worker_pipeline, &pl, 3);
+
 	if (mm_verbose >= 3)
 		fprintf(stderr, "[M::%s::%.3f*%.2f] collected minimizers\n", __func__, realtime() - mm_realtime0, cputime() / (realtime() - mm_realtime0));
 

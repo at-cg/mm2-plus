@@ -9,6 +9,17 @@
 #include "mmpriv.h"
 #include "bseq.h"
 #include "khash.h"
+#include <unistd.h>	// sysconf
+#include <parallel/algorithm>
+
+extern float seed_time;
+extern float alignment_time;
+extern float rmq_1_time, rmq_2_time;
+extern int32_t num_threads_b2b, n_seqs_;
+extern float align_time_, seed_time_, rmq_1_time_, rmq_2_time_, btk_1_time_, btk_2_time_, mean_itr_1_, mean_itr_1, mean_itr_2_, mean_itr_2, btk_1_time, btk_2_time;
+extern int32_t max_thds, is_g2g_aln;
+extern float total_time_, total_time;
+extern float mm_set_time_, mm_set_time;
 
 mm_tbuf_t *mm_tbuf_init(void)
 {
@@ -199,7 +210,17 @@ static mm128_t *collect_seed_hits(void *km, const mm_mapopt_t *opt, int max_occ,
 		}
 	}
 	kfree(km, m);
-	radix_sort_128x(a, a + (*n_a));
+	if (is_g2g_aln)
+	{
+		#if defined(PAR_SORT) 
+			__gnu_parallel::stable_sort(a, a + (*n_a), [](const mm128_t& a, const mm128_t& b) { return a.x < b.x; });
+		#else
+			radix_sort_128x(a, a + (*n_a));
+		#endif
+	}else
+	{
+		radix_sort_128x(a, a + (*n_a));
+	}
 	return a;
 }
 
@@ -224,7 +245,7 @@ static mm_reg1_t *align_regs(const mm_mapopt_t *opt, const mm_idx_t *mi, void *k
 	return regs;
 }
 
-void mm_map_frag(const mm_idx_t *mi, int n_segs, const int *qlens, const char **seqs, int *n_regs, mm_reg1_t **regs, mm_tbuf_t *b, const mm_mapopt_t *opt, const char *qname)
+void mm_map_frag(const mm_idx_t *mi, int n_segs, const int *qlens, const char **seqs, int *n_regs, mm_reg1_t **regs, mm_tbuf_t *b, const mm_mapopt_t *opt, const char *qname, int32_t n_query)
 {
 	int i, j, rep_len, qlen_sum, n_regs0, n_mini_pos;
 	int max_chain_gap_qry, max_chain_gap_ref, is_splice = !!(opt->flag & MM_F_SPLICE), is_sr = !!(opt->flag & MM_F_SR);
@@ -236,6 +257,7 @@ void mm_map_frag(const mm_idx_t *mi, int n_segs, const int *qlens, const char **
 	mm_reg1_t *regs0;
 	km_stat_t kmst;
 	float chn_pen_gap, chn_pen_skip;
+	float extra_time = 0.0;
 
 	for (i = 0, qlen_sum = 0; i < n_segs; ++i)
 		qlen_sum += qlens[i], n_regs[i] = 0, regs[i] = 0;
@@ -247,10 +269,27 @@ void mm_map_frag(const mm_idx_t *mi, int n_segs, const int *qlens, const char **
 	hash ^= __ac_Wang_hash(qlen_sum) + __ac_Wang_hash(opt->seed);
 	hash  = __ac_Wang_hash(hash);
 
+	struct timeval start_seed, end_seed;
+	if (is_g2g_aln)
+	{
+		#ifdef PROFILE
+			gettimeofday(&start_seed, NULL);
+		#endif
+	}
+
 	collect_minimizers(b->km, opt, mi, n_segs, qlens, seqs, &mv);
 	if (opt->q_occ_frac > 0.0f) mm_seed_mz_flt(b->km, &mv, opt->mid_occ, opt->q_occ_frac);
 	if (opt->flag & MM_F_HEAP_SORT) a = collect_seed_hits_heap(b->km, opt, opt->mid_occ, mi, qname, &mv, qlen_sum, &n_a, &rep_len, &n_mini_pos, &mini_pos);
 	else a = collect_seed_hits(b->km, opt, opt->mid_occ, mi, qname, &mv, qlen_sum, &n_a, &rep_len, &n_mini_pos, &mini_pos);
+
+	if (is_g2g_aln)
+	{
+		#ifdef PROFILE
+			gettimeofday(&end_seed, NULL);
+			float time_ = (end_seed.tv_sec - start_seed.tv_sec) + (end_seed.tv_usec - start_seed.tv_usec) / 1000000.0;
+			seed_time_ = std::max(seed_time_, time_);
+		#endif
+	}
 
 	if (mm_dbg_flag & MM_DBG_PRINT_SEED) {
 		fprintf(stderr, "RS\t%d\n", rep_len);
@@ -270,14 +309,29 @@ void mm_map_frag(const mm_idx_t *mi, int n_segs, const int *qlens, const char **
 		if (max_chain_gap_ref < opt->max_gap) max_chain_gap_ref = opt->max_gap;
 	} else max_chain_gap_ref = opt->max_gap;
 
+	// Compute number of threads for b2b
+	// Set Number of Threads
+	int32_t max_threads = sysconf(_SC_NPROCESSORS_ONLN);
+	max_threads = std::min(max_threads, max_thds);
+	int32_t min_threads = max_threads/n_query < max_threads ? max_threads/n_query : max_threads;
+	num_threads_b2b = 1 > min_threads ? 1 : min_threads;
+	
 	chn_pen_gap  = opt->chain_gap_scale * 0.01 * mi->k;
 	chn_pen_skip = opt->chain_skip_scale * 0.01 * mi->k;
 	if (opt->flag & MM_F_RMQ) {
 		a = mg_lchain_rmq(opt->max_gap, opt->rmq_inner_dist, opt->bw, opt->max_chain_skip, opt->rmq_size_cap, opt->min_cnt, opt->min_chain_score,
-						  chn_pen_gap, chn_pen_skip, n_a, a, &n_regs0, &u, b->km);
+						  chn_pen_gap, chn_pen_skip, n_a, a, &n_regs0, &u, b->km, num_threads_b2b);
 	} else {
 		a = mg_lchain_dp(max_chain_gap_ref, max_chain_gap_qry, opt->bw, opt->max_chain_skip, opt->max_chain_iter, opt->min_cnt, opt->min_chain_score,
 						 chn_pen_gap, chn_pen_skip, is_splice, n_segs, n_a, a, &n_regs0, &u, b->km);
+	}
+
+	struct timeval start_extra_1, end_extra_1;
+	if (is_g2g_aln)
+	{
+		#ifdef PROFILE
+			gettimeofday(&start_extra_1, NULL);
+		#endif
 	}
 
 	if (opt->bw_long > opt->bw && (opt->flag & (MM_F_SPLICE|MM_F_SR|MM_F_NO_LJOIN)) == 0 && n_segs == 1 && n_regs0 > 1) { // re-chain/long-join for long sequences
@@ -286,9 +340,26 @@ void mm_map_frag(const mm_idx_t *mi, int n_segs, const int *qlens, const char **
 			int32_t i;
 			for (i = 0, n_a = 0; i < n_regs0; ++i) n_a += (int32_t)u[i];
 			kfree(b->km, u);
-			radix_sort_128x(a, a + n_a);
+			if (is_g2g_aln)
+			{
+				#if defined(PAR_SORT) 
+					__gnu_parallel::stable_sort(a, a + n_a, [](const mm128_t& a, const mm128_t& b) { return a.x < b.x; });
+				#else
+					radix_sort_128x(a, a + n_a);
+				#endif
+			}else
+			{
+				radix_sort_128x(a, a + n_a);
+			}
+			if (is_g2g_aln)
+			{
+				#ifdef PROFILE
+					gettimeofday(&end_extra_1, NULL);
+					extra_time = (end_extra_1.tv_sec - start_extra_1.tv_sec) + (end_extra_1.tv_usec - start_extra_1.tv_usec) / 1000000.0;
+				#endif
+			}
 			a = mg_lchain_rmq(opt->max_gap, opt->rmq_inner_dist, opt->bw_long, opt->max_chain_skip, opt->rmq_size_cap, opt->min_cnt, opt->min_chain_score,
-							  chn_pen_gap, chn_pen_skip, n_a, a, &n_regs0, &u, b->km);
+							  chn_pen_gap, chn_pen_skip, n_a, a, &n_regs0, &u, b->km, num_threads_b2b);
 		}
 	} else if (opt->max_occ > opt->mid_occ && rep_len > 0 && !(opt->flag & MM_F_RMQ)) { // re-chain, mostly for short reads
 		int rechain = 0;
@@ -317,9 +388,17 @@ void mm_map_frag(const mm_idx_t *mi, int n_segs, const int *qlens, const char **
 	b->frag_gap = max_chain_gap_ref;
 	b->rep_len = rep_len;
 
-	regs0 = mm_gen_regs(b->km, hash, qlen_sum, n_regs0, u, a, !!(opt->flag&MM_F_QSTRAND));
+	struct timeval start_extra, end_extra;
+	if (is_g2g_aln)
+	{
+		#ifdef PROFILE
+			gettimeofday(&start_extra, NULL);
+		#endif
+	}
+	
+	regs0 = mm_gen_regs(b->km, hash, qlen_sum, n_regs0, u, a, !!(opt->flag&MM_F_QSTRAND)); // Parallelized
 	if (mi->n_alt) {
-		mm_mark_alt(mi, n_regs0, regs0);
+		mm_mark_alt(mi, n_regs0, regs0);  // Parallelized
 		mm_hit_sort(b->km, &n_regs0, regs0, opt->alt_drop); // this step can be merged into mm_gen_regs(); will do if this shows up in profile
 	}
 
@@ -335,6 +414,23 @@ void mm_map_frag(const mm_idx_t *mi, int n_segs, const int *qlens, const char **
 		n_regs0 = mm_filter_strand_retained(n_regs0, regs0);
 	}
 
+	if (is_g2g_aln)
+	{
+		#ifdef PROFILE
+			gettimeofday(&end_extra, NULL);
+			float time_extra = (end_extra.tv_sec - start_extra.tv_sec) + (end_extra.tv_usec - start_extra.tv_usec) / 1000000.0;
+			total_time_ = std::max(total_time_, time_extra + extra_time);
+		#endif
+	}
+
+	struct timeval start_align, end_align;
+	if (is_g2g_aln)
+	{
+		#ifdef PROFILE
+			gettimeofday(&start_align, NULL);
+		#endif
+	}
+    
 	if (n_segs == 1) { // uni-segment
 		regs0 = align_regs(opt, mi, b->km, qlens[0], seqs[0], &n_regs0, regs0, a);
 		regs0 = (mm_reg1_t*)realloc(regs0, sizeof(*regs0) * n_regs0);
@@ -352,6 +448,14 @@ void mm_map_frag(const mm_idx_t *mi, int n_segs, const int *qlens, const char **
 		mm_seg_free(b->km, n_segs, seg);
 		if (n_segs == 2 && opt->pe_ori >= 0 && (opt->flag&MM_F_CIGAR))
 			mm_pair(b->km, max_chain_gap_ref, opt->pe_bonus, opt->a * 2 + opt->b, opt->a, qlens, n_regs, regs); // pairing
+	}
+	if (is_g2g_aln)
+	{
+		#ifdef PROFILE
+			gettimeofday(&end_align, NULL);
+			float time_ = (end_align.tv_sec - start_align.tv_sec) + (end_align.tv_usec - start_align.tv_usec) / 1000000.0;
+			align_time_ = std::max(align_time_, time_);
+		#endif
 	}
 
 	kfree(b->km, mv.a);
@@ -376,7 +480,7 @@ void mm_map_frag(const mm_idx_t *mi, int n_segs, const int *qlens, const char **
 mm_reg1_t *mm_map(const mm_idx_t *mi, int qlen, const char *seq, int *n_regs, mm_tbuf_t *b, const mm_mapopt_t *opt, const char *qname)
 {
 	mm_reg1_t *regs;
-	mm_map_frag(mi, 1, &qlen, &seq, n_regs, &regs, b, opt, qname);
+	mm_map_frag(mi, 1, &qlen, &seq, n_regs, &regs, b, opt, qname, 1);
 	return regs;
 }
 
@@ -426,12 +530,14 @@ static void worker_for(void *_data, long i, int tid) // kt_for() callback
 	}
 	if (s->p->opt->flag & MM_F_INDEPEND_SEG) {
 		for (j = 0; j < s->n_seg[i]; ++j) {
-			mm_map_frag(s->p->mi, 1, &qlens[j], &qseqs[j], &s->n_reg[off+j], &s->reg[off+j], b, s->p->opt, s->seq[off+j].name);
+			int32_t n_query = s->n_seq;
+			mm_map_frag(s->p->mi, 1, &qlens[j], &qseqs[j], &s->n_reg[off+j], &s->reg[off+j], b, s->p->opt, s->seq[off+j].name, n_query);
 			s->rep_len[off + j] = b->rep_len;
 			s->frag_gap[off + j] = b->frag_gap;
 		}
 	} else {
-		mm_map_frag(s->p->mi, s->n_seg[i], qlens, qseqs, &s->n_reg[off], &s->reg[off], b, s->p->opt, s->seq[off].name);
+		int32_t n_query = s->n_seq;
+		mm_map_frag(s->p->mi, s->n_seg[i], qlens, qseqs, &s->n_reg[off], &s->reg[off], b, s->p->opt, s->seq[off].name, n_query);
 		for (j = 0; j < s->n_seg[i]; ++j) {
 			s->rep_len[off + j] = b->rep_len;
 			s->frag_gap[off + j] = b->frag_gap;
@@ -552,8 +658,33 @@ static void *worker_pipeline(void *shared, int step, void *in)
 			return s;
 		} else free(s);
     } else if (step == 1) { // step 1: map
-		if (p->n_parts > 0) merge_hits((step_t*)in);
-		else kt_for(p->n_threads, worker_for, in, ((step_t*)in)->n_frag);
+		float sum_time_ = 0.0;
+		if (p->n_parts > 0)
+		{
+			merge_hits((step_t*)in);
+		}else
+		{
+			seed_time_ = 0.0; rmq_1_time_ = 0.0; rmq_2_time_ = 0.0; align_time_ = 0.0, mean_itr_1_ = 0.0, mean_itr_2_ = 0.0;
+			btk_1_time_ = 0.0; btk_2_time_ = 0.0; total_time_ = 0.0; mm_set_time_ = 0.0;
+			n_seqs_ += ((step_t*)in)->n_frag;
+
+			kt_for(p->n_threads, worker_for, in, ((step_t*)in)->n_frag);
+			if (((step_t*)in)->n_frag <= p->n_threads) // only for haplotypes
+			{
+				// add average times
+				seed_time += seed_time_;
+				rmq_1_time += rmq_1_time_;
+				btk_1_time += btk_1_time_;
+				btk_2_time += btk_2_time_;
+				mm_set_time += mm_set_time_;
+				rmq_2_time += rmq_2_time_;
+				alignment_time += align_time_;
+				mean_itr_1 += mean_itr_1_;
+				mean_itr_2 += mean_itr_2_;
+				total_time += seed_time_ + rmq_1_time_ + btk_1_time_ + btk_2_time_ + rmq_2_time_ + align_time_ + total_time_;
+			}
+		}
+
 		return in;
     } else if (step == 2) { // step 2: output
 		void *km = 0;

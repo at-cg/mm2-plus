@@ -3,6 +3,9 @@
 #include <limits.h>
 #include <stdint.h>
 #include "kthread.h"
+#include <omp.h> // jus for the omp_get_thread_num() function
+
+extern int32_t is_g2g_aln;
 
 #if (defined(WIN32) || defined(_WIN32)) && defined(_MSC_VER)
 #define __sync_fetch_and_add(ptr, addend)     _InterlockedExchangeAdd((void*)ptr, addend)
@@ -54,17 +57,28 @@ static void *ktf_worker(void *data)
 void kt_for(int n_threads, void (*func)(void*,long,int), void *data, long n)
 {
 	if (n_threads > 1) {
-		int i;
-		kt_for_t t;
-		pthread_t *tid;
-		t.func = func, t.data = data, t.n_threads = n_threads, t.n = n;
-		t.w = (ktf_worker_t*)calloc(n_threads, sizeof(ktf_worker_t));
-		tid = (pthread_t*)calloc(n_threads, sizeof(pthread_t));
-		for (i = 0; i < n_threads; ++i)
-			t.w[i].t = &t, t.w[i].i = i;
-		for (i = 0; i < n_threads; ++i) pthread_create(&tid[i], 0, ktf_worker, &t.w[i]);
-		for (i = 0; i < n_threads; ++i) pthread_join(tid[i], 0);
-		free(tid); free(t.w);
+		if (is_g2g_aln) // hap map
+		{
+			int i;
+			kt_for_t t;
+			pthread_t *tid;
+			t.func = func, t.data = data, t.n_threads = n_threads, t.n = n;
+			t.w = (ktf_worker_t*)calloc(n_threads, sizeof(ktf_worker_t));
+			tid = (pthread_t*)calloc(n_threads, sizeof(pthread_t));
+			for (i = 0; i < n_threads; ++i)
+				t.w[i].t = &t, t.w[i].i = i;
+			for (i = 0; i < n_threads; ++i) pthread_create(&tid[i], 0, ktf_worker, &t.w[i]);
+			for (i = 0; i < n_threads; ++i) pthread_join(tid[i], 0);
+			free(tid); free(t.w);
+		}else // read map
+		{
+			#pragma omp parallel for num_threads(n_threads) schedule(dynamic)  // Use static scheduling for uniform workloads
+			for (long j = 0; j < n; ++j) {
+				int32_t tid = omp_get_thread_num();  // Capture the thread ID
+				func(data, j, tid);
+			}
+		}
+		
 	} else {
 		long j;
 		for (j = 0; j < n; ++j) func(data, j, 0);

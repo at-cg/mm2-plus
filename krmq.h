@@ -380,6 +380,16 @@ int main(void) {
 	} \
 
 /**
+ * Clear the entire tree, freeing all allocated nodes
+ *
+ * @param suf     name suffix used in KRMQ_INIT()
+ * @param proot   pointer to the root of the tree (in/out: root will be set to NULL)
+ * @param __free  function to free each node, e.g., free() or your custom free function
+ */
+#define krmq_clear(suf, proot, __free) krmq_free(lc_elem_t, head, *proot, __free); *proot = NULL;
+
+
+/**
  * Insert a node to the tree
  *
  * @param suf     name suffix used in KRMQ_INIT()

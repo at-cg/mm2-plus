@@ -6,6 +6,46 @@
 #include "minimap.h"
 #include "mmpriv.h"
 #include "ketopt.h"
+#include <x86intrin.h>
+#include <immintrin.h>
+#include <sys/time.h>
+#include <string>
+#include <map>
+#include <stdint.h>
+#include <unistd.h>
+#include <climits>
+
+// New memory allocation approach for alignment optimization
+void *km1;
+uint64_t km_size = 500000000; // 500 MB
+int km_top;
+int32_t num_threads_b2b;
+
+// Read times
+int32_t n_seqs_ = 0;
+float align_time_ = 0.0f;
+float seed_time_ = 0.0f;
+float rmq_1_time_ = 0.0f;
+float rmq_2_time_ = 0.0f;
+float btk_1_time_ = 0.0f;
+float btk_2_time_ = 0.0f;
+float mm_set_time_ = 0.0f;
+float mm_set_time = 0.0f;
+float mean_itr_1_ = 0.0f;
+float mean_itr_2_ = 0.0f;
+float mean_itr_1  = 0.0f;
+float mean_itr_2  = 0.0f;
+float total_time_ = 0.0f;
+float total_time = 0.0f;
+int32_t max_itr_1;
+int32_t max_itr_2;
+int32_t count_stages = 0;
+int32_t max_thds;
+int32_t is_g2g_aln = 0;
+
+// For logging time
+float  seed_time = 0.0f, alignment_time = 0.0f, rmq_1_time = 0.0f, rmq_2_time = 0.0f, other_time = 0.0f, btk_1_time = 0.0f, btk_2_time = 0.0f;
+struct timeval start, end;
 
 #ifdef __linux__
 #include <sys/resource.h>
@@ -123,7 +163,9 @@ static inline void yes_or_no(mm_mapopt_t *opt, int64_t flag, int long_idx, const
 
 int main(int argc, char *argv[])
 {
-	const char *opt_str = "2aSDw:k:K:t:r:f:Vv:g:G:I:d:XT:s:x:Hcp:M:n:z:A:B:b:O:E:m:N:Qu:R:hF:LC:yYPo:e:U:J:";
+	// measure time
+	gettimeofday(&start, NULL);
+	const char *opt_str = "2aSDw:k:Z:K:t:r:f:Vv:g:G:I:d:XT:s:x:Hcp:M:n:z:A:B:b:O:E:m:N:Qu:R:hF:LC:yYPo:e:U:J:";
 	ketopt_t o = KETOPT_INIT;
 	mm_mapopt_t opt;
 	mm_idxopt_t ipt;
@@ -132,14 +174,20 @@ int main(int argc, char *argv[])
 	FILE *fp_help = stderr;
 	mm_idx_reader_t *idx_rdr;
 	mm_idx_t *mi;
+	max_thds = omp_get_max_threads();
 
 	mm_verbose = 3;
 	liftrlimit();
 	mm_realtime0 = realtime();
 	mm_set_opt(0, &ipt, &opt);
+	float idx_time = 0.0f;
 
 	while ((c = ketopt(&o, argc, argv, 1, opt_str, long_options)) >= 0) { // test command line options and apply option -x/preset first
 		if (c == 'x') {
+			if (mm_set_opt(o.arg, &ipt, &opt) == 0 &&  (strcmp(o.arg, "asm5") == 0 || strcmp(o.arg, "asm10") == 0 || strcmp(o.arg, "asm20") == 0))
+			{
+				is_g2g_aln = 1; // enable Genome-to-Genome alignment
+			}
 			if (mm_set_opt(o.arg, &ipt, &opt) < 0) {
 				fprintf(stderr, "[ERROR] unknown preset '%s'\n", o.arg);
 				return 1;
@@ -184,6 +232,7 @@ int main(int argc, char *argv[])
 		else if (c == 'b') opt.transition = atoi(o.arg);
 		else if (c == 's') opt.min_dp_max = atoi(o.arg);
 		else if (c == 'C') opt.noncan = atoi(o.arg);
+		else if (c == 'Z') max_thds = atoi(o.arg);
 		else if (c == 'I') ipt.batch_size = mm_parse_num(o.arg);
 		else if (c == 'K') opt.mini_batch_size = mm_parse_num(o.arg);
 		else if (c == 'e') opt.occ_dist = mm_parse_num(o.arg);
@@ -370,6 +419,7 @@ int main(int argc, char *argv[])
 		fprintf(fp_help, "    --eqx        write =/X CIGAR operators\n");
 		fprintf(fp_help, "    -Y           use soft clipping for supplementary alignments\n");
 		fprintf(fp_help, "    -t INT       number of threads [%d]\n", n_threads);
+		fprintf(fp_help, "    -Z INT       Maximum threads for parallel chaining [%d]\n", max_thds);
 		fprintf(fp_help, "    -K NUM       minibatch size for mapping [500M]\n");
 //		fprintf(fp_help, "    -v INT       verbose level [%d]\n", mm_verbose);
 		fprintf(fp_help, "    --version    show version number\n");
@@ -401,6 +451,15 @@ int main(int argc, char *argv[])
 	}
 	if (opt.best_n == 0 && (opt.flag&MM_F_CIGAR) && mm_verbose >= 2)
 		fprintf(stderr, "[WARNING]\033[1;31m `-N 0' reduces alignment accuracy. Please use --secondary=no to suppress secondary alignments.\033[0m\n");
+	
+	struct timeval start_idx, end_idx;
+	if (is_g2g_aln)
+	{
+		#ifdef PROFILE
+			gettimeofday(&start_idx, NULL);
+		#endif
+	}
+
 	while ((mi = mm_idx_reader_read(idx_rdr, n_threads)) != 0) {
 		int ret;
 		if ((opt.flag & MM_F_CIGAR) && (mi->flag & MM_I_NO_SEQ)) {
@@ -426,6 +485,16 @@ int main(int argc, char *argv[])
 				return 1;
 			}
 		}
+
+		if (is_g2g_aln)
+		{
+			#ifdef PROFILE
+				gettimeofday(&end_idx, NULL);
+				idx_time += (end_idx.tv_sec - start_idx.tv_sec) + (end_idx.tv_usec - start_idx.tv_usec) / 1000000.0;
+				total_time += idx_time;
+			#endif
+		}
+
 		if (mm_verbose >= 3)
 			fprintf(stderr, "[M::%s::%.3f*%.2f] loaded/built the index for %d target sequence(s)\n",
 					__func__, realtime() - mm_realtime0, cputime() / (realtime() - mm_realtime0), mi->n_seq);
@@ -438,6 +507,7 @@ int main(int argc, char *argv[])
 			continue; // no query files
 		}
 		ret = 0;
+
 		if (!(opt.flag & MM_F_FRAG_MODE)) {
 			for (i = o.ind + 1; i < argc; ++i) {
 				ret = mm_map_file(mi, argv[i], &opt, n_threads);
@@ -469,6 +539,18 @@ int main(int argc, char *argv[])
 		for (i = 0; i < argc; ++i)
 			fprintf(stderr, " %s", argv[i]);
 		fprintf(stderr, "\n[M::%s] Real time: %.3f sec; CPU: %.3f sec; Peak RSS: %.3f GB\n", __func__, realtime() - mm_realtime0, cputime(), peakrss() / 1024.0 / 1024.0 / 1024.0);
+		// print seed_time, dp_time, and other timing information
+		seed_time += idx_time;
+		mean_itr_1 /= n_seqs_;
+		mean_itr_2 /= n_seqs_;
+		float other_time = total_time - seed_time - rmq_1_time - rmq_2_time - alignment_time - btk_1_time - btk_2_time - mm_set_time;
+		if (is_g2g_aln)
+		{
+			#ifdef PROFILE
+					fprintf(stderr, "[M::%s] minimizer_lookup_frac: %.3f; rmq_1_frac: %.3f; btk_1_frac: %.3f; rmq_2_frac: %.3f; btk_2_frac: %.3f; alignment_frac: %.3f; mm_set_frac: %.8f; other_frac: %.3f; mean_itr_1: %.3f; mean_itr_2: %.3f; max_itr_1: %d; max_itr_2: %d\n", __func__, \
+							seed_time/total_time, rmq_1_time/total_time, btk_1_time/total_time, rmq_2_time/total_time, btk_2_time/total_time, alignment_time/total_time, mm_set_time/total_time, other_time/total_time, mean_itr_1, mean_itr_2, max_itr_1, max_itr_2);
+			#endif
+		}
 	}
 	return 0;
 }

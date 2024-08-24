@@ -1,23 +1,4 @@
-This software constitutes a joint work and the contributions of individual
-authors are subject to different licenses.  Contributions and licenses are
-listed in the applicable source files, with specific details on each
-individual contribution captured in the revision control system.
-
---
-For all code, except as indicated otherwise:
-
-PUBLIC DOMAIN NOTICE
-
-This software is freely available to the public for use
-without a copyright notice. Restrictions cannot be placed on its present or
-future use.
-
---
-For code used from minimap2:
-
-URL: https://lh3.github.io/minimap2
-
-The MIT License
+/* The MIT License
 
 Copyright (c) 2018-     Dana-Farber Cancer Institute
               2017-2018 Broad Institute, Inc.
@@ -41,7 +22,21 @@ BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
 ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+Modified Copyright (C) 2021 Intel Corporation
+   Contacts: Saurabh Kalikar <saurabh.kalikar@intel.com>; 
+	Vasimuddin Md <vasimuddin.md@intel.com>; Sanchit Misra <sanchit.misra@intel.com>; 
+	Chirag Jain <chirag@iisc.ac.in>; Heng Li <hli@jimmy.harvard.edu>
+*/
+#include <string.h>
+#include <stdio.h>
+#include <assert.h>
+#include "ksw2.h"
+#include <immintrin.h>
+#include <x86intrin.h>
+#include <smmintrin.h>
+#include <emmintrin.h>
+void ksw_extd2_avx512(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat,
+                   int8_t q, int8_t e, int8_t q2, int8_t e2, int w, int zdrop, int end_bonus, int flag, ksw_extz_t *ez);
 
---
-For code used from mm2-fast:
-Copyright (C) 2021 Intel Corporation
+void ksw_extd2_avx2(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat,
+                   int8_t q, int8_t e, int8_t q2, int8_t e2, int w, int zdrop, int end_bonus, int flag, ksw_extz_t *ez);

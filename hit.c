@@ -4,6 +4,19 @@
 #include "mmpriv.h"
 #include "kalloc.h"
 #include "khash.h"
+#include <stdlib.h>
+#include <parallel/algorithm>
+#include "IntervalTree.h" 
+
+extern int32_t num_threads_b2b, is_g2g_aln;
+extern float mm_set_time_, mm_set_time;
+
+// CPP
+#include <iostream>
+#include <set>
+#include <vector>
+#include <chrono>
+#include <random>
 
 static inline void mm_cal_fuzzy_len(mm_reg1_t *r, const mm128_t *a)
 {
@@ -56,32 +69,80 @@ mm_reg1_t *mm_gen_regs(void *km, uint32_t hash, int qlen, int n_u, uint64_t *u, 
 	int i, k;
 
 	if (n_u == 0) return 0;
-
+	
 	// sort by score
 	z = (mm128_t*)kmalloc(km, n_u * 16);
-	for (i = k = 0; i < n_u; ++i) {
-		uint32_t h;
-		h = (uint32_t)hash64((hash64(a[k].x) + hash64(a[k].y)) ^ hash);
-		z[i].x = u[i] ^ h; // u[i] -- higher 32 bits: chain score; lower 32 bits: number of seeds in the chain
-		z[i].y = (uint64_t)k << 32 | (int32_t)u[i];
-		k += (int32_t)u[i];
+	if (is_g2g_aln)
+	{
+		int32_t* k_vec = (int32_t*)malloc(n_u * sizeof(int32_t));
+		k = 0;
+		for (i = 0; i < n_u; ++i) { // linear scan
+			k_vec[i] = k;
+			k += (int32_t)u[i];
+		}
+		#pragma omp parallel for num_threads(num_threads_b2b) private(i)
+		for (i = 0; i < n_u; ++i) { // parallel linear scan
+			uint32_t h;
+			h = (uint32_t)hash64((hash64(a[k_vec[i]].x) + hash64(a[k_vec[i]].y)) ^ hash);
+			z[i].x = u[i] ^ h; // u[i] -- higher 32 bits: chain score; lower 32 bits: number of seeds in the chain
+			z[i].y = (uint64_t)k_vec[i] << 32 | (int32_t)u[i];
+		}
+		free(k_vec);
+	}else
+	{
+		for (i = k = 0; i < n_u; ++i) {
+			uint32_t h;
+			h = (uint32_t)hash64((hash64(a[k].x) + hash64(a[k].y)) ^ hash);
+			z[i].x = u[i] ^ h; // u[i] -- higher 32 bits: chain score; lower 32 bits: number of seeds in the chain
+			z[i].y = (uint64_t)k << 32 | (int32_t)u[i];
+			k += (int32_t)u[i];
+		}
 	}
-	radix_sort_128x(z, z + n_u);
-	for (i = 0; i < n_u>>1; ++i) // reverse, s.t. larger score first
-		tmp = z[i], z[i] = z[n_u-1-i], z[n_u-1-i] = tmp;
+	
+
+	if (is_g2g_aln)
+	{
+		#if defined(PAR_SORT) 
+			__gnu_parallel::stable_sort(z, z + n_u, [](const mm128_t &a, const mm128_t &b) { return a.x < b.x; });
+		#else
+			radix_sort_128x(z, z + n_u);
+		#endif
+	}else
+	{
+		radix_sort_128x(z, z + n_u);
+	}
+
+	for (i = 0; i < n_u>>1; ++i) std::swap(z[i], z[n_u-1-i]); // reverse, so that the best hits come first
 
 	// populate r[]
 	r = (mm_reg1_t*)calloc(n_u, sizeof(mm_reg1_t));
-	for (i = 0; i < n_u; ++i) {
-		mm_reg1_t *ri = &r[i];
-		ri->id = i;
-		ri->parent = MM_PARENT_UNSET;
-		ri->score = ri->score0 = z[i].x >> 32;
-		ri->hash = (uint32_t)z[i].x;
-		ri->cnt = (int32_t)z[i].y;
-		ri->as = z[i].y >> 32;
-		ri->div = -1.0f;
-		mm_reg_set_coor(ri, qlen, a, is_qstrand);
+	if (is_g2g_aln)
+	{
+		#pragma omp parallel for num_threads(num_threads_b2b) private(i)
+		for (i = 0; i < n_u; ++i) {
+			mm_reg1_t *ri = &r[i];
+			ri->id = i;
+			ri->parent = MM_PARENT_UNSET;
+			ri->score = ri->score0 = z[i].x >> 32;
+			ri->hash = (uint32_t)z[i].x;
+			ri->cnt = (int32_t)z[i].y;
+			ri->as = z[i].y >> 32;
+			ri->div = -1.0f;
+			mm_reg_set_coor(ri, qlen, a, is_qstrand);
+		}
+	}else
+	{
+		for (i = 0; i < n_u; ++i) {
+			mm_reg1_t *ri = &r[i];
+			ri->id = i;
+			ri->parent = MM_PARENT_UNSET;
+			ri->score = ri->score0 = z[i].x >> 32;
+			ri->hash = (uint32_t)z[i].x;
+			ri->cnt = (int32_t)z[i].y;
+			ri->as = z[i].y >> 32;
+			ri->div = -1.0f;
+			mm_reg_set_coor(ri, qlen, a, is_qstrand);
+		}
 	}
 	kfree(km, z);
 	return r;
@@ -91,9 +152,10 @@ void mm_mark_alt(const mm_idx_t *mi, int n, mm_reg1_t *r)
 {
 	int i;
 	if (mi->n_alt == 0) return;
-	for (i = 0; i < n; ++i)
+	for (i = 0; i < n; ++i) // linear scan
 		if (mi->seq[r[i].rid].is_alt)
 			r[i].is_alt = 1;
+	
 }
 
 static inline int mm_alt_score(int score, float alt_diff_frac)
@@ -122,68 +184,198 @@ void mm_split_reg(mm_reg1_t *r, mm_reg1_t *r2, int n, int qlen, mm128_t *a, int 
 	r->split |= 1, r2->split |= 2;
 }
 
-void mm_set_parent(void *km, float mask_level, int mask_len, int n, mm_reg1_t *r, int sub_diff, int hard_mask_level, float alt_diff_frac) // and compute mm_reg1_t::subsc
-{
-	int i, j, k, *w;
-	uint64_t *cov;
-	if (n <= 0) return;
-	for (i = 0; i < n; ++i) r[i].id = i;
-	cov = (uint64_t*)kmalloc(km, n * sizeof(uint64_t));
-	w = (int*)kmalloc(km, n * sizeof(int));
-	w[0] = 0, r[0].parent = 0;
-	for (i = 1, k = 1; i < n; ++i) {
-		mm_reg1_t *ri = &r[i];
-		int si = ri->qs, ei = ri->qe, n_cov = 0, uncov_len = 0;
-		if (hard_mask_level) goto skip_uncov;
-		for (j = 0; j < k; ++j) { // traverse existing primary hits to find overlapping hits
-			mm_reg1_t *rp = &r[w[j]];
-			int sj = rp->qs, ej = rp->qe;
-			if (ej <= si || sj >= ei) continue;
-			if (sj < si) sj = si;
-			if (ej > ei) ej = ei;
-			cov[n_cov++] = (uint64_t)sj<<32 | ej;
-		}
-		if (n_cov == 0) {
-			goto set_parent_test; // no overlapping primary hits; then i is a new primary hit
-		} else if (n_cov > 0) { // there are overlapping primary hits; find the length not covered by existing primary hits
-			int j, x = si;
-			radix_sort_64(cov, cov + n_cov);
-			for (j = 0; j < n_cov; ++j) {
-				if ((int)(cov[j]>>32) > x) uncov_len += (cov[j]>>32) - x;
-				x = (int32_t)cov[j] > x? (int32_t)cov[j] : x;
-			}
-			if (ei > x) uncov_len += ei - x;
-		}
-skip_uncov:
-		for (j = 0; j < k; ++j) { // traverse existing primary hits again
-			mm_reg1_t *rp = &r[w[j]];
-			int sj = rp->qs, ej = rp->qe, min, max, ol;
-			if (ej <= si || sj >= ei) continue; // no overlap
-			min = ej - sj < ei - si? ej - sj : ei - si;
-			max = ej - sj > ei - si? ej - sj : ei - si;
-			ol = si < sj? (ei < sj? 0 : ei < ej? ei - sj : ej - sj) : (ej < si? 0 : ej < ei? ej - si : ei - si); // overlap length; TODO: this can be simplified
-			if ((float)ol / min - (float)uncov_len / max > mask_level && uncov_len <= mask_len) { // then this is a secondary hit
-				int cnt_sub = 0, sci = ri->score;
-				ri->parent = rp->parent;
-				if (!rp->is_alt && ri->is_alt) sci = mm_alt_score(sci, alt_diff_frac);
-				rp->subsc = rp->subsc > sci? rp->subsc : sci;
-				if (ri->cnt >= rp->cnt) cnt_sub = 1;
-				if (rp->p && ri->p && (rp->rid != ri->rid || rp->rs != ri->rs || rp->re != ri->re || ol != min)) { // the last condition excludes identical hits after DP
-					sci = ri->p->dp_max;
-					if (!rp->is_alt && ri->is_alt) sci = mm_alt_score(sci, alt_diff_frac);
-					rp->p->dp_max2 = rp->p->dp_max2 > sci? rp->p->dp_max2 : sci;
-					if (rp->p->dp_max - ri->p->dp_max <= sub_diff) cnt_sub = 1;
-				}
-				if (cnt_sub) ++rp->n_sub;
-				break;
-			}
-		}
-set_parent_test:
-		if (j == k) w[k++] = i, ri->parent = i, ri->n_sub = 0;
-	}
-	kfree(km, cov);
-	kfree(km, w);
+void compute_uncovered_length(int si, int ei, int n_cov, uint64_t *cov, int &uncov_len) {
+    int x = si;
+   	radix_sort_64(cov, cov + n_cov);
+    for (int j = 0; j < n_cov; ++j) {
+        if ((int)(cov[j] >> 32) > x) {
+            uncov_len += (cov[j] >> 32) - x;
+        }
+        x = (int32_t)cov[j] > x ? (int32_t)cov[j] : x;
+    }
+    if (ei > x) uncov_len += ei - x;
 }
+
+bool find_parent_or_secondary(int i, mm_reg1_t *r, float mask_level, int mask_len, int sub_diff, float alt_diff_frac, uint64_t *cov, IntervalTree<int, int> *IT) {
+    mm_reg1_t *ri = &r[i];
+    int si = ri->qs, ei = ri->qe;
+    int uncov_len = 0;
+
+    int n_cov = 0;
+
+	std::vector<int> overlapping_segs = IT->findOverlappingValues(si, ei);
+	for (const auto& s : overlapping_segs){
+		mm_reg1_t *rp = &r[s];
+		int sj = rp->qs, ej = rp->qe;
+        if (sj < si) sj = si;
+        if (ej > ei) ej = ei;
+        cov[n_cov++] = (uint64_t)sj << 32 | ej;
+	}
+
+    if (n_cov > 0) {
+        compute_uncovered_length(si, ei, n_cov, cov, uncov_len);
+    }
+
+	for (const auto& s : overlapping_segs){
+		mm_reg1_t *rp = &r[s];
+        int sj = rp->qs, ej = rp->qe;
+        if (ej <= si || sj >= ei) continue; // No overlap
+
+        int min = std::min(ej - sj, ei - si);
+        int max = std::max(ej - sj, ei - si);
+        int ol = 0;
+
+        if (ei > sj && ej > si) {
+            ol = std::min(ei, ej) - std::max(si, sj);
+        }
+
+        if ((float)ol / min - (float)uncov_len / max > mask_level && uncov_len <= mask_len) { // Secondary hit
+            int cnt_sub = 0, sci = ri->score;
+            ri->parent = rp->parent;
+            if (!rp->is_alt && ri->is_alt) sci = mm_alt_score(sci, alt_diff_frac);
+            rp->subsc = std::max(rp->subsc, sci);
+            if (ri->cnt >= rp->cnt) cnt_sub = 1;
+            if (rp->p && ri->p && (rp->rid != ri->rid || rp->rs != ri->rs || rp->re != ri->re || ol != min)) { // Excludes identical hits after DP
+                sci = ri->p->dp_max;
+                if (!rp->is_alt && ri->is_alt) sci = mm_alt_score(sci, alt_diff_frac);
+                rp->p->dp_max2 = std::max(rp->p->dp_max2, sci);
+                if (rp->p->dp_max - ri->p->dp_max <= sub_diff) cnt_sub = 1;
+            }
+            if (cnt_sub) ++rp->n_sub;
+            return true;
+        }
+    }
+	
+    return false;
+}
+
+#ifdef OPT_OLP
+	void mm_set_parent(void *km, float mask_level, int mask_len, int n, mm_reg1_t *r, int sub_diff, int hard_mask_level, float alt_diff_frac) {
+		if (n <= 0) return;
+
+		struct timeval start, end;
+		#ifdef PROFILE
+			gettimeofday(&start, NULL);
+		#endif
+
+		float time_ = 0.0f;
+
+		#pragma omp parallel for num_threads(num_threads_b2b)
+		for (int i = 0; i < n; ++i) r[i].id = i; // Linear scan
+
+		uint64_t *cov = (uint64_t *)kmalloc(km, n * sizeof(uint64_t));
+		r[0].parent = 0;
+
+		// Define the interval tree with integer type for start/stop and string for value
+		using IntervalType = Interval<int, int>;
+		using IntervalTreeType = IntervalTree<int, int>;
+		IntervalTreeType *IT = new IntervalTreeType(); // Initialize an empty interval tree
+		IT->insert(IntervalType(r[0].qs, r[0].qe, 0));
+
+		for (int i = 1, k = 1; i < n; ++i) {
+			mm_reg1_t *ri = &r[i]; // Auto prefetch by compiler
+			int si = ri->qs, ei = ri->qe;
+
+			if (!hard_mask_level) {
+				if (!find_parent_or_secondary(i, r, mask_level, mask_len, sub_diff, alt_diff_frac, cov, IT)) {
+					ri->parent = i;
+					ri->n_sub = 0;
+					IT->insert(IntervalType(si, ei, i));
+				}
+			} else {
+				ri->parent = i;
+				ri->n_sub = 0;
+				IT->insert(IntervalType(si, ei, i));
+			}
+		}
+
+		// delete IT;
+		delete IT;
+		kfree(km, cov);
+
+		#ifdef PROFILE
+			gettimeofday(&end, NULL);
+			time_ = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1000000.0;
+			mm_set_time_  = mm_set_time_ > time_ ? mm_set_time_ : time_;
+		#endif
+	}
+#else
+	void mm_set_parent(void *km, float mask_level, int mask_len, int n, mm_reg1_t *r, int sub_diff, int hard_mask_level, float alt_diff_frac) // and compute mm_reg1_t::subsc
+	{
+		struct timeval start, end;
+		#ifdef PROFILE
+			gettimeofday(&start, NULL);
+		#endif
+
+		float time_ = 0.0f;
+
+		int i, j, k, *w;
+		uint64_t *cov;
+		if (n <= 0) return;
+		for (i = 0; i < n; ++i) r[i].id = i;
+		cov = (uint64_t*)kmalloc(km, n * sizeof(uint64_t));
+		w = (int*)kmalloc(km, n * sizeof(int));
+		w[0] = 0, r[0].parent = 0;
+		for (i = 1, k = 1; i < n; ++i) {
+			mm_reg1_t *ri = &r[i];
+			int si = ri->qs, ei = ri->qe, n_cov = 0, uncov_len = 0;
+			if (hard_mask_level) goto skip_uncov;
+			for (j = 0; j < k; ++j) { // traverse existing primary hits to find overlapping hits
+				mm_reg1_t *rp = &r[w[j]];
+				int sj = rp->qs, ej = rp->qe;
+				if (ej <= si || sj >= ei) continue;
+				if (sj < si) sj = si;
+				if (ej > ei) ej = ei;
+				cov[n_cov++] = (uint64_t)sj<<32 | ej;
+			}
+			if (n_cov == 0) {
+				goto set_parent_test; // no overlapping primary hits; then i is a new primary hit
+			} else if (n_cov > 0) { // there are overlapping primary hits; find the length not covered by existing primary hits
+				int j, x = si;
+				radix_sort_64(cov, cov + n_cov);
+				for (j = 0; j < n_cov; ++j) {
+					if ((int)(cov[j]>>32) > x) uncov_len += (cov[j]>>32) - x;
+					x = (int32_t)cov[j] > x? (int32_t)cov[j] : x;
+				}
+				if (ei > x) uncov_len += ei - x;
+			}
+	skip_uncov:
+			for (j = 0; j < k; ++j) { // traverse existing primary hits again
+				mm_reg1_t *rp = &r[w[j]];
+				int sj = rp->qs, ej = rp->qe, min, max, ol;
+				if (ej <= si || sj >= ei) continue; // no overlap
+				min = ej - sj < ei - si? ej - sj : ei - si;
+				max = ej - sj > ei - si? ej - sj : ei - si;
+				ol = si < sj? (ei < sj? 0 : ei < ej? ei - sj : ej - sj) : (ej < si? 0 : ej < ei? ej - si : ei - si); // overlap length; TODO: this can be simplified
+				if ((float)ol / min - (float)uncov_len / max > mask_level && uncov_len <= mask_len) { // then this is a secondary hit
+					int cnt_sub = 0, sci = ri->score;
+					ri->parent = rp->parent;
+					if (!rp->is_alt && ri->is_alt) sci = mm_alt_score(sci, alt_diff_frac);
+					rp->subsc = rp->subsc > sci? rp->subsc : sci;
+					if (ri->cnt >= rp->cnt) cnt_sub = 1;
+					if (rp->p && ri->p && (rp->rid != ri->rid || rp->rs != ri->rs || rp->re != ri->re || ol != min)) { // the last condition excludes identical hits after DP
+						sci = ri->p->dp_max;
+						if (!rp->is_alt && ri->is_alt) sci = mm_alt_score(sci, alt_diff_frac);
+						rp->p->dp_max2 = rp->p->dp_max2 > sci? rp->p->dp_max2 : sci;
+						if (rp->p->dp_max - ri->p->dp_max <= sub_diff) cnt_sub = 1;
+					}
+					if (cnt_sub) ++rp->n_sub;
+					break;
+				}
+			}
+	set_parent_test:
+			if (j == k) w[k++] = i, ri->parent = i, ri->n_sub = 0;
+		}
+		kfree(km, cov);
+		kfree(km, w);
+
+		#ifdef PROFILE
+			gettimeofday(&end, NULL);
+			time_ = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1000000.0;
+			mm_set_time_  = mm_set_time_ > time_ ? mm_set_time_ : time_;
+		#endif
+	}
+#endif
 
 void mm_hit_sort(void *km, int *n_regs, mm_reg1_t *r, float alt_diff_frac)
 {
@@ -192,8 +384,10 @@ void mm_hit_sort(void *km, int *n_regs, mm_reg1_t *r, float alt_diff_frac)
 	mm_reg1_t *t;
 
 	if (n <= 1) return;
+	
 	aux = (mm128_t*)kmalloc(km, n * 16);
 	t = (mm_reg1_t*)kmalloc(km, n * sizeof(mm_reg1_t));
+	
 	for (i = n_aux = 0; i < n; ++i) {
 		if (r[i].inv || r[i].cnt > 0) { // squeeze out elements with cnt==0 (soft deleted)
 			int score;
@@ -207,10 +401,24 @@ void mm_hit_sort(void *km, int *n_regs, mm_reg1_t *r, float alt_diff_frac)
 			r[i].p = 0;
 		}
 	}
+
+
 	assert(has_cigar + no_cigar == 1);
-	radix_sort_128x(aux, aux + n_aux);
-	for (i = n_aux - 1; i >= 0; --i)
+	if (is_g2g_aln)
+	{
+		#if defined(PAR_SORT) 
+			__gnu_parallel::stable_sort(aux, aux + n_aux, [](const mm128_t &a, const mm128_t &b) { return a.x < b.x; });
+		#else
+			radix_sort_128x(aux, aux + n_aux);
+		#endif
+	}else
+	{
+		radix_sort_128x(aux, aux + n_aux);
+	}
+
+	for (i = n_aux - 1; i >= 0; --i) // reverse the sorted array
 		t[n_aux - 1 - i] = r[aux[i].y];
+
 	memcpy(r, t, sizeof(mm_reg1_t) * n_aux);
 	*n_regs = n_aux;
 	kfree(km, aux);
@@ -237,7 +445,8 @@ void mm_sync_regs(void *km, int n_regs, mm_reg1_t *regs) // keep mm_reg1_t::{id,
 	n_tmp = max_id + 1;
 	tmp = (int*)kmalloc(km, n_tmp * sizeof(int));
 	for (i = 0; i < n_tmp; ++i) tmp[i] = -1;
-	for (i = 0; i < n_regs; ++i)
+
+	for (i = 0; i < n_regs; ++i) // No need for parallelization linear scan
 		if (regs[i].id >= 0) tmp[regs[i].id] = i;
 	for (i = 0; i < n_regs; ++i) {
 		mm_reg1_t *r = &regs[i];
@@ -277,7 +486,7 @@ void mm_select_sub(void *km, float pri_ratio, int min_diff, int best_n, int chec
 int mm_filter_strand_retained(int n_regs, mm_reg1_t *r)
 {
 	int i, k;
-	for (i = k = 0; i < n_regs; ++i) {
+	for (i = k = 0; i < n_regs; ++i) { // No need for parallelization linear scan
 		int p = r[i].parent;
 		if (!r[i].strand_retained || r[i].div < r[p].div * 5.0f || r[i].div < 0.01f) {
 			if (k < i) r[k++] = r[i];
