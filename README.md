@@ -36,7 +36,7 @@ make all=1
 make all=1 par_chain_2=1 
 
 # test run
-./minimap2 -cx asm5 test/MT-human.fa test/MT-orang.fa -o out.paf
+./minimap2 -cx map-ont test/MT-human.fa test/MT-orang.fa -o out.paf
 ```
 
 ### Usage
@@ -47,7 +47,7 @@ mm2-opt uses all the command line options from minimap2, please use minimap2 [re
 ./minimap2 -cx map-ont test/MT-human.fa test/MT-orang.fa -o out.paf
 
 # test genome alignment
-./minimap2 -cx asm5 test/MT-human.fa test/MT-orang.fa -o out.paf
+./minimap2 -cx asm20 test/MT-human.fa test/MT-orang.fa -o out.paf
 ```
 
 
