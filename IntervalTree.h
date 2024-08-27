@@ -11,26 +11,25 @@
 #ifdef USE_INTERVAL_TREE_NAMESPACE
 namespace interval_tree {
 #endif
+
 template <class Scalar, typename Value>
 class Interval {
 public:
     Scalar start;
     Scalar stop;
     Value value;
+
     Interval(const Scalar& s, const Scalar& e, const Value& v)
-    : start(std::min(s, e))
-    , stop(std::max(s, e))
-    , value(v) 
-    {}
+        : start(std::min(s, e)), stop(std::max(s, e)), value(v) {}
 };
 
 template <class Scalar, typename Value>
-Value intervalStart(const Interval<Scalar,Value>& i) {
+Scalar intervalStart(const Interval<Scalar, Value>& i) {
     return i.start;
 }
 
 template <class Scalar, typename Value>
-Value intervalStop(const Interval<Scalar, Value>& i) {
+Scalar intervalStop(const Interval<Scalar, Value>& i) {
     return i.stop;
 }
 
@@ -46,331 +45,202 @@ public:
     typedef Interval<Scalar, Value> interval;
     typedef std::vector<interval> interval_vector;
 
-
     struct IntervalStartCmp {
-        bool operator()(const interval& a, const interval& b) {
+        bool operator()(const interval& a, const interval& b) const {
             return a.start < b.start;
         }
     };
 
+    struct IntervalCompVal {
+        bool operator()(const interval& a, const interval& b) const {
+            return a.value < b.value;
+        }
+    };
+
     struct IntervalStopCmp {
-        bool operator()(const interval& a, const interval& b) {
+        bool operator()(const interval& a, const interval& b) const {
             return a.stop < b.stop;
         }
     };
 
     IntervalTree()
-        : left(nullptr)
-        , right(nullptr)
-        , center(0)
-    {}
+        : root(nullptr) {}
+
+    IntervalTree(interval_vector&& ivals)
+        : root(nullptr) {
+        for (auto& i : ivals) {
+            insert(i);
+        }
+    }
 
     ~IntervalTree() = default;
 
-    std::unique_ptr<IntervalTree> clone() const {
-        return std::unique_ptr<IntervalTree>(new IntervalTree(*this));
-    }
-
     IntervalTree(const IntervalTree& other)
-    :   intervals(other.intervals),
-        left(other.left ? other.left->clone() : nullptr),
-        right(other.right ? other.right->clone() : nullptr),
-        center(other.center)
-    {}
-
-    IntervalTree& operator=(IntervalTree&&) = default;
-    IntervalTree(IntervalTree&&) = default;
+        : root(clone(other.root)) {}
 
     IntervalTree& operator=(const IntervalTree& other) {
-        center = other.center;
-        intervals = other.intervals;
-        left = other.left ? other.left->clone() : nullptr;
-        right = other.right ? other.right->clone() : nullptr;
+        if (this != &other) {
+            root = clone(other.root);
+        }
         return *this;
     }
 
-    IntervalTree(
-            interval_vector&& ivals,
-            std::size_t depth = 16,
-            std::size_t minbucket = 64,
-            std::size_t maxbucket = 512, 
-            Scalar leftextent = 0,
-            Scalar rightextent = 0)
-      : left(nullptr)
-      , right(nullptr)
-    {
-        --depth;
-        const auto minmaxStop = std::minmax_element(ivals.begin(), ivals.end(), 
-                                                    IntervalStopCmp());
-        const auto minmaxStart = std::minmax_element(ivals.begin(), ivals.end(), 
-                                                     IntervalStartCmp());
-        if (!ivals.empty()) {
-            center = (minmaxStart.first->start + minmaxStop.second->stop) / 2;
-        }
-        if (leftextent == 0 && rightextent == 0) {
-            // sort intervals by start
-            std::sort(ivals.begin(), ivals.end(), IntervalStartCmp());
-        } else {
-            assert(std::is_sorted(ivals.begin(), ivals.end(), IntervalStartCmp()));
-        }
-        if (depth == 0 || (ivals.size() < minbucket && ivals.size() < maxbucket)) {
-            std::sort(ivals.begin(), ivals.end(), IntervalStartCmp());
-            intervals = std::move(ivals);
-            assert(is_valid().first);
-            return;
-        } else {
-            Scalar leftp = 0;
-            Scalar rightp = 0;
+    IntervalTree(IntervalTree&&) = default;
+    IntervalTree& operator=(IntervalTree&&) = default;
 
-            if (leftextent || rightextent) {
-                leftp = leftextent;
-                rightp = rightextent;
-            } else {
-                leftp = ivals.front().start;
-                rightp = std::max_element(ivals.begin(), ivals.end(),
-                                          IntervalStopCmp())->stop;
-            }
-
-            interval_vector lefts;
-            interval_vector rights;
-
-            for (typename interval_vector::const_iterator i = ivals.begin(); 
-                 i != ivals.end(); ++i) {
-                const interval& interval = *i;
-                if (interval.stop < center) {
-                    lefts.push_back(interval);
-                } else if (interval.start > center) {
-                    rights.push_back(interval);
-                } else {
-                    assert(interval.start <= center);
-                    assert(center <= interval.stop);
-                    intervals.push_back(interval);
-                }
-            }
-
-            if (!lefts.empty()) {
-                left.reset(new IntervalTree(std::move(lefts), 
-                                            depth, minbucket, maxbucket,
-                                            leftp, center));
-            }
-            if (!rights.empty()) {
-                right.reset(new IntervalTree(std::move(rights), 
-                                             depth, minbucket, maxbucket, 
-                                             center, rightp));
-            }
-        }
-        assert(is_valid().first);
+    // Insert a new interval
+    void insert(const interval& i) {
+        root = insert(std::move(root), i);
+        root->color = false; // root is always black
     }
 
-    // Call f on all intervals near the range [start, stop]:
-    template <class UnaryFunction>
-    void visit_near(const Scalar& start, const Scalar& stop, UnaryFunction f) const {
-        if (!intervals.empty() && ! (stop < intervals.front().start)) {
-            for (auto & i : intervals) {
-              f(i);
-            }
-        }
-        if (left && start <= center) {
-            left->visit_near(start, stop, f);
-        }
-        if (right && stop >= center) {
-            right->visit_near(start, stop, f);
-        }
-    }
-
-    // Call f on all intervals crossing pos
-    template <class UnaryFunction>
-    void visit_overlapping(const Scalar& pos, UnaryFunction f) const {
-        visit_overlapping(pos, pos, f);
-    }
-
-    // Call f on all intervals overlapping [start, stop]
-    template <class UnaryFunction>
-    void visit_overlapping(const Scalar& start, const Scalar& stop, UnaryFunction f) const {
-        auto filterF = [&](const interval& interval) {
-            // if (interval.stop >= start && interval.start <= stop) {
-            //     // Only apply f if overlapping
-            //     f(interval);
-            // }
-            if (interval.stop > start && interval.start < stop) {
-                // Only apply f if overlapping
-                f(interval);
-            }
-        };
-        visit_near(start, stop, filterF);
-    }
-
-    // Call f on all intervals contained within [start, stop]
-    template <class UnaryFunction>
-    void visit_contained(const Scalar& start, const Scalar& stop, UnaryFunction f) const {
-        auto filterF = [&](const interval& interval) {
-            if (start <= interval.start && interval.stop <= stop) {
-                f(interval);
-            }
-        };
-        visit_near(start, stop, filterF);
-    }
-
-    interval_vector findOverlapping(const Scalar& start, const Scalar& stop) const {
+    // Find all intervals overlapping with [start, stop]
+    interval_vector findOverlapping(const Scalar& start, const Scalar& stop, bool sort = false) const {
         interval_vector result;
-        visit_overlapping(start, stop,
-                          [&](const interval& interval) { 
-                            result.emplace_back(interval); 
-                          });
+        visit_overlapping(root.get(), start, stop, [&](const interval& i) { result.push_back(i); });
+        if (sort) std::sort(result.begin(), result.end(), IntervalStartCmp());
         return result;
     }
 
-    // push overlapping intervals to result std::vector<Value>
+    // Find all values of intervals overlapping with [start, stop]
     std::vector<Value> findOverlappingValues(const Scalar& start, const Scalar& stop) const {
         std::vector<Value> result;
-        visit_overlapping(start, stop,
-                          [&](const interval& interval) { 
-                            result.push_back(interval.value); 
-                          });
+        interval_vector result_intervals;
+        visit_overlapping(root.get(), start, stop, [&](const interval& i) { result_intervals.push_back(i); });
+        std::sort(result_intervals.begin(), result_intervals.end(), IntervalCompVal());
+        for (const auto& i : result_intervals) result.push_back(i.value);
         return result;
     }
 
-    interval_vector findContained(const Scalar& start, const Scalar& stop) const {
+    // Find all intervals contained within [start, stop]
+    interval_vector findContained(const Scalar& start, const Scalar& stop, bool sort = false) const {
         interval_vector result;
-        visit_contained(start, stop,
-                        [&](const interval& interval) { 
-                          result.push_back(interval); 
-                        });
+        visit_contained(root.get(), start, stop, [&](const interval& i) { result.push_back(i); });
+        if (sort) std::sort(result.begin(), result.end(), IntervalStartCmp());
         return result;
     }
+
     bool empty() const {
-        if (left && !left->empty()) {
-            return false;
-        }
-        if (!intervals.empty()) { 
-            return false;
-        }
-        if (right && !right->empty()) {
-            return false;
-        }
-        return true;
-    }
-
-    template <class UnaryFunction>
-    void visit_all(UnaryFunction f) const {
-        if (left) {
-            left->visit_all(f);
-        }
-        std::for_each(intervals.begin(), intervals.end(), f);
-        if (right) {
-            right->visit_all(f);
-        }
-    }
-
-    std::pair<Scalar, Scalar> extentBruitForce() const {
-        struct Extent {
-            std::pair<Scalar, Scalar> x = {std::numeric_limits<Scalar>::max(),
-                                                       std::numeric_limits<Scalar>::min() };
-            void operator()(const interval & interval) {
-                x.first  = std::min(x.first,  interval.start);
-                x.second = std::max(x.second, interval.stop);
-            }
-                                                                };
-                                            Extent extent;
-
-        visit_all([&](const interval & interval) { extent(interval); });
-        return extent.x;
-                                            }
-
-    // Check all constraints.
-    // If first is false, second is invalid.
-    std::pair<bool, std::pair<Scalar, Scalar>> is_valid() const {
-        const auto minmaxStop = std::minmax_element(intervals.begin(), intervals.end(), 
-                                                    IntervalStopCmp());
-        const auto minmaxStart = std::minmax_element(intervals.begin(), intervals.end(), 
-                                                     IntervalStartCmp());
-        
-        std::pair<bool, std::pair<Scalar, Scalar>> result = {true, { std::numeric_limits<Scalar>::max(),
-                                                                     std::numeric_limits<Scalar>::min() }};
-        if (!intervals.empty()) {
-            result.second.first   = std::min(result.second.first,  minmaxStart.first->start);
-            result.second.second  = std::min(result.second.second, minmaxStop.second->stop);
-        }
-        if (left) {
-            auto valid = left->is_valid();
-            result.first &= valid.first;
-            result.second.first   = std::min(result.second.first,  valid.second.first);
-            result.second.second  = std::min(result.second.second, valid.second.second);
-            if (!result.first) { return result; }
-            if (valid.second.second >= center) {
-                result.first = false;
-                return result;
-            }
-        }
-        if (right) {
-            auto valid = right->is_valid();
-            result.first &= valid.first;
-            result.second.first   = std::min(result.second.first,  valid.second.first);
-            result.second.second  = std::min(result.second.second, valid.second.second);
-            if (!result.first) { return result; }
-            if (valid.second.first <= center) { 
-                result.first = false;
-                return result;
-            }
-        }
-        if (!std::is_sorted(intervals.begin(), intervals.end(), IntervalStartCmp())) {
-            result.first = false;
-        }
-        return result;        
-    }
-
-    void insert(const Interval<Scalar, Value>& new_interval) {
-        if (new_interval.stop < center) {
-            if (left) {
-                left->insert(new_interval);
-            } else {
-                interval_vector left_intervals = {new_interval};
-                left.reset(new IntervalTree(std::move(left_intervals), 1, 1, 1, 0, center));
-            }
-        } else if (new_interval.start > center) {
-            if (right) {
-                right->insert(new_interval);
-            } else {
-                interval_vector right_intervals = {new_interval};
-                right.reset(new IntervalTree(std::move(right_intervals), 1, 1, 1, center, 0));
-            }
-        } else {
-            intervals.push_back(new_interval);
-        }
+        return !root;
     }
 
     friend std::ostream& operator<<(std::ostream& os, const IntervalTree& itree) {
         return writeOut(os, itree);
     }
 
-    friend std::ostream& writeOut(std::ostream& os, const IntervalTree& itree, 
-                                  std::size_t depth = 0) {
-        auto pad = [&]() { for (std::size_t i = 0; i != depth; ++i) { os << ' '; } };
-        pad(); os << "center: " << itree.center << '\n';
-        for (const interval & inter : itree.intervals) {
-            pad(); os << inter << '\n';
-        }
-        if (itree.left) {
-            pad(); os << "left:\n";
-            writeOut(os, *itree.left, depth + 1);
-        } else {
-            pad(); os << "left: nullptr\n";
-        }
-        if (itree.right) {
-            pad(); os << "right:\n";
-            writeOut(os, *itree.right, depth + 1);
-        } else {
-            pad(); os << "right: nullptr\n";
-        }
-        return os;
+private:
+    struct Node {
+        interval data;
+        Scalar max_right;
+        std::unique_ptr<Node> left;
+        std::unique_ptr<Node> right;
+        bool color; // Red-Black Tree color: true for red, false for black
+
+        Node(const interval& i)
+            : data(i), max_right(i.stop), left(nullptr), right(nullptr), color(true) {}
+    };
+
+    std::unique_ptr<Node> root;
+
+    // Red-Black Tree functions
+    bool is_red(const std::unique_ptr<Node>& node) const {
+        return node && node->color;
     }
 
-private:
-    interval_vector intervals;
-    std::unique_ptr<IntervalTree> left;
-    std::unique_ptr<IntervalTree> right;
-    Scalar center;
+    std::unique_ptr<Node> rotate_left(std::unique_ptr<Node> h) {
+        std::unique_ptr<Node> x = std::move(h->right);
+        h->right = std::move(x->left);
+        x->left = std::move(h);
+        x->color = x->left->color;
+        x->left->color = true;
+        return x;
+    }
+
+    std::unique_ptr<Node> rotate_right(std::unique_ptr<Node> h) {
+        std::unique_ptr<Node> x = std::move(h->left);
+        h->left = std::move(x->right);
+        x->right = std::move(h);
+        x->color = x->right->color;
+        x->right->color = true;
+        return x;
+    }
+
+    void flip_colors(Node* h) {
+        h->color = !h->color;
+        if (h->left) h->left->color = !h->left->color;
+        if (h->right) h->right->color = !h->right->color;
+    }
+
+    std::unique_ptr<Node> insert(std::unique_ptr<Node> node, const interval& i) {
+        if (!node) {
+            return std::make_unique<Node>(i);
+        }
+
+        if (i.start < node->data.start) {
+            node->left = insert(std::move(node->left), i);
+        } else if (i.start > node->data.start || (i.start == node->data.start && i.stop > node->data.stop)) {
+            node->right = insert(std::move(node->right), i);
+        } else {
+            node->data = i; // Replace existing interval with the new one
+        }
+
+        if (is_red(node->right) && !is_red(node->left)) node = rotate_left(std::move(node));
+        if (is_red(node->left) && is_red(node->left->left)) node = rotate_right(std::move(node));
+        if (is_red(node->left) && is_red(node->right)) flip_colors(node.get());
+
+        node->max_right = std::max({node->data.stop, max_right(node->left), max_right(node->right)});
+        return node;
+    }
+
+    Scalar max_right(const std::unique_ptr<Node>& node) const {
+        return node ? node->max_right : std::numeric_limits<Scalar>::min();
+    }
+
+    std::unique_ptr<Node> clone(const std::unique_ptr<Node>& node) const {
+        if (!node) return nullptr;
+        auto new_node = std::make_unique<Node>(node->data);
+        new_node->left = clone(node->left);
+        new_node->right = clone(node->right);
+        new_node->color = node->color;
+        new_node->max_right = node->max_right;
+        return new_node;
+    }
+
+    // Helper functions for visit
+    template <class UnaryFunction>
+    void visit_near(const Node* node, const Scalar& start, const Scalar& stop, UnaryFunction f) const {
+        if (!node) return;
+
+        if (!node->left && !node->right && node->data.stop >= start && node->data.start <= stop) {
+            f(node->data);
+        }
+
+        if (node->left && start <= node->left->max_right) {
+            visit_near(node->left.get(), start, stop, f);
+        }
+        if (node->right && node->data.start <= stop) {
+            visit_near(node->right.get(), start, stop, f);
+        }
+    }
+
+    template <class UnaryFunction>
+    void visit_overlapping(const Node* node, const Scalar& start, const Scalar& stop, UnaryFunction f) const {
+        if (!node) return;
+
+        if (node->data.stop > start && node->data.start < stop) {
+            f(node->data);
+        }
+
+        if (node->left && start < node->left->max_right) {
+            visit_overlapping(node->left.get(), start, stop, f);
+        }
+
+        if (node->right && node->data.start < stop) {
+            visit_overlapping(node->right.get(), start, stop, f);
+        }
+    }
 };
+
 #ifdef USE_INTERVAL_TREE_NAMESPACE
 }
 #endif

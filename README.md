@@ -64,7 +64,7 @@ cd mm2-opt && make all=1
 
 ```bash
 # Run minimap2
-git clone https://github.com/lh3/minimap2.git -b v2.24
+git clone https://github.com/lh3/minimap2.git -b v2.28
 cd minimap2 && make
 ./minimap2 -ax map-ont test/MT-human.fa test/MT-orang.fa --max-chain-skip=1000000 > mm2.paf
 ```
