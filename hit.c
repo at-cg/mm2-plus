@@ -6,7 +6,7 @@
 #include "khash.h"
 #include <stdlib.h>
 #include "IntervalTree.h"
-#include <parallel/algorithm>
+#include <parallel/algorithm> // GNU parallel sort only for stable_sort
 
 extern int32_t num_threads_b2b, is_g2g_aln;
 extern float mm_set_time_, mm_set_time;
@@ -14,6 +14,7 @@ extern float mm_set_time_, mm_set_time;
 // CPP
 #include <iostream>
 #include <set>
+#include <algorithm>
 #include <vector>
 #include <chrono>
 #include <random>
@@ -102,7 +103,7 @@ mm_reg1_t *mm_gen_regs(void *km, uint32_t hash, int qlen, int n_u, uint64_t *u, 
 
 	if (is_g2g_aln)
 	{
-		#if defined(PAR_SORT) 
+		#if defined(PAR_SORT)
 			__gnu_parallel::stable_sort(z, z + n_u, [](const mm128_t &a, const mm128_t &b) { return a.x < b.x; });
 		#else
 			radix_sort_128x(z, z + n_u);
@@ -307,9 +308,12 @@ void mm_set_parent_it(void *km, float mask_level, int mask_len, int n, mm_reg1_t
 	if (n <= 0) return;
 
 	struct timeval start, end;
-	#ifdef PROFILE
-		gettimeofday(&start, NULL);
-	#endif
+	if (is_g2g_aln)
+	{
+		#ifdef PROFILE
+			gettimeofday(&start, NULL);
+		#endif
+	}
 
 	float time_ = 0.0f;
 
@@ -343,20 +347,23 @@ void mm_set_parent_it(void *km, float mask_level, int mask_len, int n, mm_reg1_t
 	delete IT;
 	kfree(km, cov);
 
-	#ifdef PROFILE
-		gettimeofday(&end, NULL);
-		time_ = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1000000.0;
-		mm_set_time_  = mm_set_time_ > time_ ? mm_set_time_ : time_;
-	#endif
+	if (is_g2g_aln)
+	{
+		#ifdef PROFILE
+			gettimeofday(&end, NULL);
+			time_ = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1000000.0;
+			mm_set_time_  = mm_set_time_ > time_ ? mm_set_time_ : time_;
+		#endif
+	}
 }
 
 void mm_set_parent_opt(void *km, float mask_level, int mask_len, int n, mm_reg1_t *r, int sub_diff, int hard_mask_level, float alt_diff_frac) // and compute mm_reg1_t::subsc
 {
 	if (n <= 0) return;
 
+	struct timeval start, end;
 	if (is_g2g_aln)
 	{
-		struct timeval start, end;
 		#ifdef PROFILE
 			gettimeofday(&start, NULL);
 		#endif
@@ -444,7 +451,7 @@ void mm_hit_sort(void *km, int *n_regs, mm_reg1_t *r, float alt_diff_frac)
 	assert(has_cigar + no_cigar == 1);
 	if (is_g2g_aln)
 	{
-		#if defined(PAR_SORT) 
+		#if defined(PAR_SORT)
 			__gnu_parallel::stable_sort(aux, aux + n_aux, [](const mm128_t &a, const mm128_t &b) { return a.x < b.x; });
 		#else
 			radix_sort_128x(aux, aux + n_aux);

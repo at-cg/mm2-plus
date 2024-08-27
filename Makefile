@@ -149,7 +149,7 @@ bseq.o: bseq.h kvec.h kalloc.h kseq.h
 esterr.o: mmpriv.h minimap.h bseq.h kseq.h
 example.o: minimap.h kseq.h
 format.o: kalloc.h mmpriv.h minimap.h bseq.h kseq.h
-hit.o: mmpriv.h minimap.h bseq.h kseq.h kalloc.h khash.h
+hit.o: mmpriv.h minimap.h bseq.h kseq.h kalloc.h khash.h IntervalTree.h
 index.o: kthread.h bseq.h minimap.h mmpriv.h kseq.h kvec.h kalloc.h khash.h
 index.o: ksort.h
 kalloc.o: kalloc.h

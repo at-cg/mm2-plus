@@ -2,15 +2,21 @@
 #define __INTERVAL_TREE_H
 
 #include <vector>
-#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <cassert>
 #include <limits>
+#include <initializer_list>    // For std::initializer_list
+#include <algorithm>           // For std::max_element
 
 #ifdef USE_INTERVAL_TREE_NAMESPACE
 namespace interval_tree {
 #endif
+
+template <typename T>
+T sequential_max(std::initializer_list<T> ilist) {
+    return *std::max_element(ilist.begin(), ilist.end());
+}
 
 template <class Scalar, typename Value>
 class Interval {
@@ -187,8 +193,8 @@ private:
         if (is_red(node->right) && !is_red(node->left)) node = rotate_left(std::move(node));
         if (is_red(node->left) && is_red(node->left->left)) node = rotate_right(std::move(node));
         if (is_red(node->left) && is_red(node->right)) flip_colors(node.get());
-
-        node->max_right = std::max({node->data.stop, max_right(node->left), max_right(node->right)});
+        
+        node->max_right = sequential_max<Scalar>({node->data.stop, max_right(node->left), max_right(node->right)});
         return node;
     }
 
