@@ -10,7 +10,6 @@
 #include "bseq.h"
 #include "khash.h"
 #include <unistd.h>	// sysconf
-#include <parallel/algorithm>
 
 extern float seed_time;
 extern float alignment_time;
@@ -213,7 +212,7 @@ static mm128_t *collect_seed_hits(void *km, const mm_mapopt_t *opt, int max_occ,
 	if (is_g2g_aln)
 	{
 		#if defined(PAR_SORT) 
-			__gnu_parallel::stable_sort(a, a + (*n_a), [](const mm128_t& a, const mm128_t& b) { return a.x < b.x; });
+			parallel_sort(a, *n_a);
 		#else
 			radix_sort_128x(a, a + (*n_a));
 		#endif
@@ -343,7 +342,7 @@ void mm_map_frag(const mm_idx_t *mi, int n_segs, const int *qlens, const char **
 			if (is_g2g_aln)
 			{
 				#if defined(PAR_SORT) 
-					__gnu_parallel::stable_sort(a, a + n_a, [](const mm128_t& a, const mm128_t& b) { return a.x < b.x; });
+					parallel_sort(a, n_a);
 				#else
 					radix_sort_128x(a, a + n_a);
 				#endif

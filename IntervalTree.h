@@ -194,7 +194,7 @@ private:
         if (is_red(node->left) && is_red(node->left->left)) node = rotate_right(std::move(node));
         if (is_red(node->left) && is_red(node->right)) flip_colors(node.get());
         
-        node->max_right = sequential_max<Scalar>({node->data.stop, max_right(node->left), max_right(node->right)});
+        node->max_right = std::max({node->data.stop, max_right(node->left), max_right(node->right)});
         return node;
     }
 

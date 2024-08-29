@@ -1,7 +1,6 @@
 #include "mmpriv.h"
 #include "kalloc.h"
 #include "ksort.h"
-#include <parallel/algorithm>
 
 extern int32_t num_threads_b2b;
 
@@ -13,7 +12,7 @@ void mm_seed_mz_flt(void *km, mm128_v *mv, int32_t q_occ_max, float q_occ_frac)
 	a = Kmalloc(km, mm128_t, mv->n);
 	for (i = 0; i < mv->n; ++i)
 		a[i].x = mv->a[i].x, a[i].y = i;
-	__gnu_parallel::stable_sort(a, a + mv->n, [](const mm128_t& a, const mm128_t& b) { return a.x < b.x; });
+	parallel_sort(a, mv->n);
 	for (st = 0, i = 1; i <= mv->n; ++i) {
 		if (i == mv->n || a[i].x != a[st].x) {
 			int32_t cnt = i - st;

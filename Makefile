@@ -2,7 +2,7 @@ CPPFLAGS=	-g -std=c++2a -march=native -O3 -w -DHAVE_KALLOC -fopenmp
 INCLUDES=
 OBJS=		kthread.o kalloc.o misc.o bseq.o sketch.o sdust.o options.o index.o \
 			lchain.o align.o hit.o seed.o map.o format.o pe.o esterr.o splitidx.o \
-			ksw2_ll_sse.o
+			ksw2_ll_sse.o parallel_sort.o
 PROG=		minimap2
 PROG_EXTRA=	sdust minimap2-lite
 LIBS=		-lm -lz -lpthread
@@ -20,7 +20,7 @@ ifeq ($(opt_olp),1)
 endif
 
 ifeq ($(par_sort),1)
-	CPPFLAGS+=-DPAR_SORT  -D_GLIBCXX_PARALLEL
+	CPPFLAGS+=-DPAR_SORT
 endif
 
 ifeq ($(par_btk),1)

@@ -40,6 +40,16 @@
 #define MALLOC(type, len) ((type*)malloc((len) * sizeof(type)))
 #define CALLOC(type, len) ((type*)calloc((len), sizeof(type)))
 
+#pragma once
+#ifdef __cplusplus
+extern "C" {
+#endif
+void parallel_sort(mm128_t* z, size_t n_u);
+
+#ifdef __cplusplus
+}
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -6,7 +6,6 @@
 #include "khash.h"
 #include <stdlib.h>
 #include "IntervalTree.h"
-#include <parallel/algorithm> // GNU parallel sort only for stable_sort
 
 extern int32_t num_threads_b2b, is_g2g_aln;
 extern float mm_set_time_, mm_set_time;
@@ -104,7 +103,7 @@ mm_reg1_t *mm_gen_regs(void *km, uint32_t hash, int qlen, int n_u, uint64_t *u, 
 	if (is_g2g_aln)
 	{
 		#if defined(PAR_SORT)
-			__gnu_parallel::stable_sort(z, z + n_u, [](const mm128_t &a, const mm128_t &b) { return a.x < b.x; });
+			parallel_sort(z, n_u);
 		#else
 			radix_sort_128x(z, z + n_u);
 		#endif
@@ -452,7 +451,7 @@ void mm_hit_sort(void *km, int *n_regs, mm_reg1_t *r, float alt_diff_frac)
 	if (is_g2g_aln)
 	{
 		#if defined(PAR_SORT)
-			__gnu_parallel::stable_sort(aux, aux + n_aux, [](const mm128_t &a, const mm128_t &b) { return a.x < b.x; });
+			parallel_sort(aux, n_aux);
 		#else
 			radix_sort_128x(aux, aux + n_aux);
 		#endif

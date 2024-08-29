@@ -23,7 +23,6 @@
 #include <map>
 #include <immintrin.h>
 #include <cstring>
-#include <parallel/algorithm>
 
 extern float mean_itr_1_, mean_itr_2_;
 extern int32_t max_itr_1, max_itr_2;
@@ -219,7 +218,7 @@ uint64_t *mg_chain_backtrack_par(void *km, int64_t n, int32_t *f, int64_t *p, in
 		if (is_g2g_aln)
 		{
 			#if defined(PAR_SORT) 
-				__gnu_parallel::stable_sort(z.begin(), z.end(), [](const mm128_t& a, const mm128_t& b) { return a.x < b.x; });
+				parallel_sort(z.data(), n_z);
 			#else
 				radix_sort_128x(z.data(), z.data() + n_z);
 			#endif
@@ -350,7 +349,7 @@ static mm128_t *compact_a(void *km, int32_t n_u, uint64_t *u, int32_t n_v, int32
 	if (is_g2g_aln)
 	{
 		#if defined(PAR_SORT) 
-			__gnu_parallel::stable_sort(w, w + n_u, [](const mm128_t& a, const mm128_t& b) { return a.x < b.x; });
+			parallel_sort(w, n_u);
 		#else
 			radix_sort_128x(w, w + n_u);
 		#endif
