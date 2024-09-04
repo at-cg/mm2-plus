@@ -20,6 +20,7 @@ void *km1;
 uint64_t km_size = 500000000; // 500 MB
 int km_top;
 int32_t num_threads_b2b;
+std::fstream anchor_dist_file;
 
 // Read times
 int32_t n_seqs_ = 0;
@@ -163,6 +164,11 @@ static inline void yes_or_no(mm_mapopt_t *opt, int64_t flag, int long_idx, const
 
 int main(int argc, char *argv[])
 {
+	// open a file
+	#ifdef GET_DIST
+		anchor_dist_file.open("anchor_dist.txt", std::ios::out);
+	#endif
+
 	// measure time
 	gettimeofday(&start, NULL);
 	const char *opt_str = "2aSDw:k:Z:K:t:r:f:Vv:g:G:I:d:XT:s:x:Hcp:M:n:z:A:B:b:O:E:m:N:Qu:R:hF:LC:yYPo:e:U:J:";
@@ -552,5 +558,10 @@ int main(int argc, char *argv[])
 			#endif
 		}
 	}
+
+	// close a file
+	#ifdef GET_DIST
+		anchor_dist_file.close();
+	#endif
 	return 0;
 }

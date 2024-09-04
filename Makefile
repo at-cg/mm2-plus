@@ -35,6 +35,10 @@ ifeq ($(par_chain_2),1)
 	CPPFLAGS+=-DPAR_CHAIN_2 -ljemalloc
 endif
 
+ifeq ($(get_dist),1)
+	CPPFLAGS+=-DGET_DIST -DPAR_CHAIN_1 -ljemalloc
+endif
+
 ifeq ($(all),1)
 	CPPFLAGS+=-DPAR_BTK -DPAR_SORT -DPAR_CHAIN_1 -DPAR_DP_CHAIN -DOPT_OLP -ljemalloc
 	avx=1

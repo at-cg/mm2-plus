@@ -29,6 +29,7 @@ extern int32_t max_itr_1, max_itr_2;
 extern int32_t num_threads_b2b;
 extern float rmq_1_time_, rmq_2_time_, btk_1_time_, btk_2_time_;
 extern int32_t count_stages, is_g2g_aln;
+extern std::fstream anchor_dist_file;
 
 static int64_t mg_chain_bk_end_par(const int32_t max_drop, const std::vector<mm128_t> &z, const int32_t *f, std::pair<int64_t, int32_t> *p_t_vec, const int64_t k_, const int64_t k)
 {
@@ -795,6 +796,14 @@ mm128_t *mg_lchain_rmq_opt(int max_dist, int max_dist_inner, int bw, int max_chn
             }
         }
         if (num_chr == 1) {st_vec[0] = 0; end_vec[0] = n - 1;}
+
+		#ifdef GET_DIST
+			int64_t max_anchor_chrom = -1;
+			for (i = 0; i < num_chr; i++) if (end_vec[i] - st_vec[i] + 1 >= max_anchor_chrom) max_anchor_chrom = end_vec[i] - st_vec[i] + 1;
+			double max_anchor_chrom_f = (double)max_anchor_chrom/(double)n;
+			// write to anchor_dist_file line by line
+			anchor_dist_file << max_anchor_chrom_f << "\n";
+		#endif
 
         if (max_dist < bw) max_dist = bw;
         if (max_dist_inner <= 0 || max_dist_inner >= max_dist) max_dist_inner = 0;
