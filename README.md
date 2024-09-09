@@ -1,10 +1,10 @@
-# <div align="center">mm2-opt</div>
+# <div align="center">mm2-plus</div>
 
 ## <div align="center">A versatile pairwise aligner for genomic and spliced nucleotide sequences</div>
 
 ### Introduction
 
-**mm2-opt** is an optimized long-read to genome and genome-to-genome aligner, built on top of **minimap2** (Minimap2-2.28 (r1209)). It incorporates optimizations from **mm2-fast** (v1.0) and introduces novel parallel algorithms for efficient genome-to-genome alignment. **mm2-opt** achieves performance improvements by leveraging the following key optimizations:
+**mm2-plus** is an optimized long-read to genome and genome-to-genome aligner, built on top of **minimap2** (Minimap2-2.28 (r1209)). It incorporates optimizations from **mm2-fast** (v1.0) and introduces novel parallel algorithms for efficient genome-to-genome alignment. **mm2-plus** achieves performance improvements by leveraging the following key optimizations:
 
 1. **Inter-chromosomal parallel chaining**
 2. **Intra-chromosomal parallel chaining**
@@ -14,21 +14,21 @@
 6. **AVX2 and AVX512 DP chaining** (from [Intel TAL](https://github.com/IntelLabs/Trans-Omics-Acceleration-Library))
 7. **Parallel anchor sorting** (GNU parallel [std::stable_sort](https://gcc.gnu.org/onlinedocs/gcc-4.8.1/libstdc++/manual/manual/parallel_mode_using.html))
 
-**mm2-opt** serves as a drop-in replacement for **minimap2**, providing identical output while significantly reducing execution time, especially for genome-to-genome alignments.
+**mm2-plus** serves as a drop-in replacement for **minimap2**, providing identical output while significantly reducing execution time, especially for genome-to-genome alignments.
 
 ### Prerequisites
 
-#### Before using mm2-opt, ensure you have the following dependencies installed:
+#### Before using mm2-plus, ensure you have the following dependencies installed:
 
 1. **GCC 9 or later** - [GCC](https://gcc.gnu.org/)
 2. **Zlib** - [zlib](https://zlib.net/)
 3. **Jemalloc** - [Jemalloc](https://github.com/jemalloc/jemalloc)
 
-### Get mm2-opt
+### Get mm2-plus
 
 ```bash
-git clone https://github.com/gsc74/mm2-opt
-cd mm2-opt
+git clone https://github.com/gsc74/mm2-plus
+cd mm2-plus
 # build optimized alignment with inter cromosomal parallel chaining
 make all=1
 
@@ -40,7 +40,7 @@ make all=1 par_chain_2=1
 ```
 
 ### Usage
-mm2-opt uses all the command line options from minimap2, please use minimap2 [readme](#readme_mm2) for usage information. Here are some test exmaples for mm2-opt run
+mm2-plus uses all the command line options from minimap2, please use minimap2 [readme](#readme_mm2) for usage information. Here are some test exmaples for mm2-plus run
 
 ```bash
 # test read alignment
@@ -53,13 +53,13 @@ mm2-opt uses all the command line options from minimap2, please use minimap2 [re
 
 ### Accuracy evaluation
 #### 1) Read Alignment
-The accuracy of `mm2-opt` can be validated against `minimap2` (v2.28). Ensure the `--max-chain-skip=1000000` parameter is used during the chaining phase for high precision. Follow these steps:
+The accuracy of `mm2-plus` can be validated against `minimap2` (v2.28). Ensure the `--max-chain-skip=1000000` parameter is used during the chaining phase for high precision. Follow these steps:
 
 ```bash
-# Run mm2-opt
-git clone https://github.com/gsc74/mm2-opt.git   
-cd mm2-opt && make all=1 
-./minimap2 -ax map-ont test/MT-human.fa test/MT-orang.fa --max-chain-skip=1000000 > mm2-opt.paf
+# Run mm2-plus
+git clone https://github.com/gsc74/mm2-plus.git   
+cd mm2-plus && make all=1 
+./minimap2 -ax map-ont test/MT-human.fa test/MT-orang.fa --max-chain-skip=1000000 > mm2-plus.paf
 ```
 
 ```bash
@@ -73,7 +73,7 @@ Compare the outputs:
 
 ```bash
 # Get the difference
-diff mm2.paf mm2-opt.paf
+diff mm2.paf mm2-plus.paf
 ```
 
 The `diff` command should return null output, indicating no differences (0 lines).
@@ -82,15 +82,15 @@ The `diff` command should return null output, indicating no differences (0 lines
 To compare genome alignments, use the following commands:
 
 ```bash
-# Run mm2-opt with inter-chromosomal parallel chaining
-git clone https://github.com/gsc74/mm2-opt.git   
-cd mm2-opt && make all=1 
-./minimap2 -ax asm20 test/MT-human.fa test/MT-orang.fa > mm2-opt_inter.paf
+# Run mm2-plus with inter-chromosomal parallel chaining
+git clone https://github.com/gsc74/mm2-plus.git   
+cd mm2-plus && make all=1 
+./minimap2 -ax asm20 test/MT-human.fa test/MT-orang.fa > mm2-plus_inter.paf
 
-# Run mm2-opt with intra-chromosomal parallel chaining
-git clone https://github.com/gsc74/mm2-opt.git   
-cd mm2-opt && make all=1 par_chain_2=1
-./minimap2 -ax asm20 test/MT-human.fa test/MT-orang.fa > mm2-opt_intra.paf
+# Run mm2-plus with intra-chromosomal parallel chaining
+git clone https://github.com/gsc74/mm2-plus.git   
+cd mm2-plus && make all=1 par_chain_2=1
+./minimap2 -ax asm20 test/MT-human.fa test/MT-orang.fa > mm2-plus_intra.paf
 ```
 
 ```bash
@@ -103,8 +103,8 @@ cd minimap2 && make
 Compare the outputs:
 
 ```bash
-diff mm2.paf mm2-opt_inter.paf
-diff mm2.paf mm2-opt_intra.paf
+diff mm2.paf mm2-plus_inter.paf
+diff mm2.paf mm2-plus_intra.paf
 ```
 
 Both `diff` commands should return null output.
