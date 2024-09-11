@@ -1,8 +1,8 @@
 CPPFLAGS=	-g -std=c++2a -march=native -O3 -w -DHAVE_KALLOC -fopenmp
 INCLUDES=
-OBJS=		kthread.o kalloc.o misc.o bseq.o sketch.o sdust.o options.o index.o \
-			lchain.o align.o hit.o seed.o map.o format.o pe.o esterr.o splitidx.o \
-			ksw2_ll_sse.o parallel_sort.o
+OBJS=		src/kthread.o src/kalloc.o src/misc.o src/bseq.o src/sketch.o src/sdust.o src/options.o src/index.o \
+			src/lchain.o src/align.o src/hit.o src/seed.o src/map.o src/format.o src/pe.o src/esterr.o src/splitidx.o \
+			src/ksw2_ll_sse.o src/parallel_sort.o
 PROG=		minimap2
 PROG_EXTRA=	sdust minimap2-lite
 LIBS=		-lm -lz -lpthread
@@ -53,12 +53,12 @@ ifeq ($(sse2only),) # if sse2only is not defined
 	ifeq ($(avx),1)
 		CPPFLAGS+=-DALIGN_AVX -DAPPLY_AVX2
 	endif
-	OBJS+=ksw2_extz2_sse41.o ksw2_extd2_sse41.o ksw2_exts2_sse41.o ksw2_extz2_sse2.o ksw2_extd2_sse2.o ksw2_exts2_sse2.o ksw2_dispatch.o ksw2_extd2_avx.o
+	OBJS+=src/ksw2_extz2_sse41.o src/ksw2_extd2_sse41.o src/ksw2_exts2_sse41.o src/ksw2_extz2_sse2.o src/ksw2_extd2_sse2.o src/ksw2_exts2_sse2.o src/ksw2_dispatch.o src/ksw2_extd2_avx.o
 else                # if sse2only is defined
-	OBJS+=ksw2_extz2_sse.o ksw2_extd2_sse.o ksw2_exts2_sse.o
+	OBJS+=src/ksw2_extz2_sse.o src/ksw2_extd2_sse.o src/ksw2_exts2_sse.o
 endif
 else				# if arm_neon is defined
-	OBJS+=ksw2_extz2_neon.o ksw2_extd2_neon.o ksw2_exts2_neon.o
+	OBJS+=src/ksw2_extz2_neon.o src/ksw2_extd2_neon.o src/ksw2_exts2_neon.o
     INCLUDES+=-Isse2neon
 ifeq ($(aarch64),)	#if aarch64 is not defined
 	CPPFLAGS+=-D_FILE_OFFSET_BITS=64 -mfpu=neon -fsigned-char
@@ -87,89 +87,89 @@ all:$(PROG)
 
 extra:all $(PROG_EXTRA)
 
-minimap2:main.o libminimap2.a
-		$(CXX) $(CPPFLAGS) main.o -o $@ -L. -lminimap2 $(LIBS)
+minimap2:src/main.o libminimap2.a
+		$(CXX) $(CPPFLAGS) src/main.o -o $@ -L. -lminimap2 $(LIBS)
 
-minimap2-lite:example.o libminimap2.a
+minimap2-lite:src/example.o libminimap2.a
 		$(CXX) $(CPPFLAGS) $< -o $@ -L. -lminimap2 $(LIBS)
 
 libminimap2.a:$(OBJS)
 		$(AR) -csru $@ $(OBJS)
 
-sdust:sdust.c kalloc.o kalloc.h kdq.h kvec.h kseq.h ketopt.h sdust.h
-		$(CXX) -D_SDUST_MAIN $(CPPFLAGS) $< kalloc.o -o $@ -lz
+sdust:src/sdust.c src/kalloc.o src/kalloc.h src/kdq.h src/kvec.h src/kseq.h src/ketopt.h src/sdust.h
+		$(CXX) -D_SDUST_MAIN $(CPPFLAGS) $< src/kalloc.o -o $@ -lz
 
 # SSE-specific targets on x86/x86_64
 
 ifeq ($(arm_neon),)   # if arm_neon is defined, compile this target with the default setting (i.e. no -msse2)
-ksw2_ll_sse.o:ksw2_ll_sse.c ksw2.h kalloc.h
+src/ksw2_ll_sse.o:src/ksw2_ll_sse.c src/ksw2.h src/kalloc.h
 		$(CXX) -c $(CPPFLAGS) -msse2 $(INCLUDES) $< -o $@
 endif
 
-ksw2_extz2_sse41.o:ksw2_extz2_sse.c ksw2.h kalloc.h
+src/ksw2_extz2_sse41.o:src/ksw2_extz2_sse.c src/ksw2.h src/kalloc.h
 		$(CXX) -c $(CPPFLAGS) -msse4.1 -DKSW_CPU_DISPATCH $(INCLUDES) $< -o $@
 
-ksw2_extz2_sse2.o:ksw2_extz2_sse.c ksw2.h kalloc.h
+src/ksw2_extz2_sse2.o:src/ksw2_extz2_sse.c src/ksw2.h src/kalloc.h
 		$(CXX) -c $(CPPFLAGS) -msse2 -mno-sse4.1 -DKSW_CPU_DISPATCH -DKSW_SSE2_ONLY $(INCLUDES) $< -o $@
 
-ksw2_extd2_sse41.o:ksw2_extd2_sse.c ksw2.h kalloc.h
+src/ksw2_extd2_sse41.o:src/ksw2_extd2_sse.c src/ksw2.h src/kalloc.h
 		$(CXX) -c $(CPPFLAGS) -msse4.1 -DKSW_CPU_DISPATCH $(INCLUDES) $< -o $@
 
-ksw2_extd2_sse2.o:ksw2_extd2_sse.c ksw2.h kalloc.h
+src/ksw2_extd2_sse2.o:src/ksw2_extd2_sse.c src/ksw2.h src/kalloc.h
 		$(CXX) -c $(CPPFLAGS) -msse2 -mno-sse4.1 -DKSW_CPU_DISPATCH -DKSW_SSE2_ONLY $(INCLUDES) $< -o $@
 
-ksw2_exts2_sse41.o:ksw2_exts2_sse.c ksw2.h kalloc.h
+src/ksw2_exts2_sse41.o:src/ksw2_exts2_sse.c src/ksw2.h src/kalloc.h
 		$(CXX) -c $(CPPFLAGS) -msse4.1 -DKSW_CPU_DISPATCH $(INCLUDES) $< -o $@
 
-ksw2_exts2_sse2.o:ksw2_exts2_sse.c ksw2.h kalloc.h
+src/ksw2_exts2_sse2.o:src/ksw2_exts2_sse.c src/ksw2.h src/kalloc.h
 		$(CXX) -c $(CPPFLAGS) -msse2 -mno-sse4.1 -DKSW_CPU_DISPATCH -DKSW_SSE2_ONLY $(INCLUDES) $< -o $@
 
-ksw2_dispatch.o:ksw2_dispatch.c ksw2.h
+src/ksw2_dispatch.o:src/ksw2_dispatch.c src/ksw2.h
 		$(CXX) -c $(CPPFLAGS) -msse4.1 -DKSW_CPU_DISPATCH $(INCLUDES) $< -o $@
 
 # NEON-specific targets on ARM
 
-ksw2_extz2_neon.o:ksw2_extz2_sse.c ksw2.h kalloc.h
+src/ksw2_extz2_neon.o:src/ksw2_extz2_sse.c src/ksw2.h src/kalloc.h
 		$(CXX) -c $(CPPFLAGS) -DKSW_SSE2_ONLY -D__SSE2__ $(INCLUDES) $< -o $@
 
-ksw2_extd2_neon.o:ksw2_extd2_sse.c ksw2.h kalloc.h
+src/ksw2_extd2_neon.o:src/ksw2_extd2_sse.c src/ksw2.h src/kalloc.h
 		$(CXX) -c $(CPPFLAGS) -DKSW_SSE2_ONLY -D__SSE2__ $(INCLUDES) $< -o $@
 
-ksw2_exts2_neon.o:ksw2_exts2_sse.c ksw2.h kalloc.h
+src/ksw2_exts2_neon.o:src/ksw2_exts2_sse.c src/ksw2.h src/kalloc.h
 		$(CXX) -c $(CPPFLAGS) -DKSW_SSE2_ONLY -D__SSE2__ $(INCLUDES) $< -o $@
 
 # other non-file targets
 
 clean:
-		rm -fr gmon.out *.o a.out $(PROG) $(PROG_EXTRA) *~ *.a *.dSYM build dist mappy*.so mappy.c python/mappy.c mappy.egg*
+		rm -fr gmon.out src/*.o a.out $(PROG) $(PROG_EXTRA) *~ *.a *.dSYM build dist mappy*.so mappy.c python/mappy.c mappy.egg*
 
 depend:
-		(LC_ALL=C; export LC_ALL; makedepend -Y -- $(CPPFLAGS) -- *.c)
+		(LC_ALL=C; export LC_ALL; makedepend -Y -- $(CPPFLAGS) -- src/*.c)
 
 # DO NOT DELETE
 
-align.o: minimap.h mmpriv.h bseq.h kseq.h ksw2.h kalloc.h ksw2_extd2_avx.h
-bseq.o: bseq.h kvec.h kalloc.h kseq.h
-esterr.o: mmpriv.h minimap.h bseq.h kseq.h
-example.o: minimap.h kseq.h
-format.o: kalloc.h mmpriv.h minimap.h bseq.h kseq.h
-hit.o: mmpriv.h minimap.h bseq.h kseq.h kalloc.h khash.h IntervalTree.h
-index.o: kthread.h bseq.h minimap.h mmpriv.h kseq.h kvec.h kalloc.h khash.h
-index.o: ksort.h
-kalloc.o: kalloc.h
-ksw2_extd2_sse.o: ksw2.h kalloc.h
-ksw2_exts2_sse.o: ksw2.h kalloc.h
-ksw2_extz2_sse.o: ksw2.h kalloc.h
-ksw2_ll_sse.o: ksw2.h kalloc.h
-kthread.o: kthread.h
-lchain.o: mmpriv.h minimap.h bseq.h kseq.h kalloc.h krmq.h
-main.o: bseq.h minimap.h mmpriv.h kseq.h ketopt.h
-map.o: kthread.h kvec.h kalloc.h sdust.h mmpriv.h minimap.h bseq.h kseq.h
-map.o: khash.h ksort.h
-misc.o: mmpriv.h minimap.h bseq.h kseq.h ksort.h
-options.o: mmpriv.h minimap.h bseq.h kseq.h
-pe.o: mmpriv.h minimap.h bseq.h kseq.h kvec.h kalloc.h ksort.h
-sdust.o: kalloc.h kdq.h kvec.h sdust.h
-seed.o: mmpriv.h minimap.h bseq.h kseq.h kalloc.h ksort.h
-sketch.o: kvec.h kalloc.h mmpriv.h minimap.h bseq.h kseq.h
-splitidx.o: mmpriv.h minimap.h bseq.h kseq.h
+src/align.o: src/minimap.h src/mmpriv.h src/bseq.h src/kseq.h src/ksw2.h src/kalloc.h src/ksw2_extd2_avx.h
+src/bseq.o: src/bseq.h src/kvec.h src/kalloc.h src/kseq.h
+src/esterr.o: src/mmpriv.h src/minimap.h src/bseq.h src/kseq.h
+src/example.o: src/minimap.h src/kseq.h
+src/format.o: src/kalloc.h src/mmpriv.h src/minimap.h src/bseq.h src/kseq.h
+src/hit.o: src/mmpriv.h src/minimap.h src/bseq.h src/kseq.h src/kalloc.h src/khash.h src/IntervalTree.h
+src/index.o: src/kthread.h src/bseq.h src/minimap.h src/mmpriv.h src/kseq.h src/kvec.h src/kalloc.h src/khash.h
+src/index.o: src/ksort.h
+src/kalloc.o: src/kalloc.h
+src/ksw2_extd2_sse.o: src/ksw2.h src/kalloc.h
+src/ksw2_exts2_sse.o: src/ksw2.h src/kalloc.h
+src/ksw2_extz2_sse.o: src/ksw2.h src/kalloc.h
+src/ksw2_ll_sse.o: src/ksw2.h src/kalloc.h
+src/kthread.o: src/kthread.h
+src/lchain.o: src/mmpriv.h src/minimap.h src/bseq.h src/kseq.h src/kalloc.h src/krmq.h
+src/main.o: src/bseq.h src/minimap.h src/mmpriv.h src/kseq.h src/ketopt.h
+src/map.o: src/kthread.h src/kvec.h src/kalloc.h src/sdust.h src/mmpriv.h src/minimap.h src/bseq.h src/kseq.h
+src/map.o: src/khash.h src/ksort.h
+src/misc.o: src/mmpriv.h src/minimap.h src/bseq.h src/kseq.h src/ksort.h
+src/options.o: src/mmpriv.h src/minimap.h src/bseq.h src/kseq.h
+src/pe.o: src/mmpriv.h src/minimap.h src/bseq.h src/kseq.h src/kvec.h src/kalloc.h src/ksort.h
+src/sdust.o: src/kalloc.h src/kdq.h src/kvec.h src/sdust.h
+src/seed.o: src/mmpriv.h src/minimap.h src/bseq.h src/kseq.h src/kalloc.h src/ksort.h
+src/sketch.o: src/kvec.h src/kalloc.h src/mmpriv.h src/minimap.h src/bseq.h src/kseq.h
+src/splitidx.o: src/mmpriv.h src/minimap.h src/bseq.h src/kseq.h

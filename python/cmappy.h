@@ -94,7 +94,7 @@ static inline mm_reg1_t *mm_map_aux(const mm_idx_t *mi, const char *seq1, const 
 			seq[1][i] = seq_comp_table[t];
 		}
 		if (len[1]&1) seq[1][len[1]>>1] = seq_comp_table[(uint8_t)seq[1][len[1]>>1]];
-		mm_map_frag(mi, 2, len, (const char**)seq, _n_regs, regs, b, opt, NULL);
+		mm_map_frag(mi, 2, len, (const char**)seq, _n_regs, regs, b, opt, NULL, 1);
 		for (i = 0; i < _n_regs[1]; ++i)
 			regs[1][i].rev = !regs[1][i].rev;
 		*n_regs = _n_regs[0] + _n_regs[1];
