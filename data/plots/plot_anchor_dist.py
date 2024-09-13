@@ -6,7 +6,7 @@ plt.rcParams.update({'font.size': 7})  # Base font size scaled by 1.2
 
 # List of files and corresponding dataset names
 files = ['human.txt', 'primates.txt', 'maize.txt', 'barley.txt']
-datasets = ['D_Human', 'D_Primates', 'D_Maize', 'D_Barley']
+datasets = ['Human-Human', 'Human-Bonobo', 'Maize-Maize', 'Barley-Barley']
 
 # Initialize an empty list to store the data
 data = []

@@ -23,7 +23,7 @@ long_categories = [
 ]
 
 # Total runtimes for each dataset
-runtimes = [733.525, 1116.460, 5990.317]
+runtimes = [1237.404, 2040.404, 46035.151]
 
 # Create a figure with 3 subplots (one for each dataset)
 fig, axes = plt.subplots(1, 3, figsize=(16, 5))
