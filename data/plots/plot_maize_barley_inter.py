@@ -18,9 +18,9 @@ value_mm2_hap_chain_btk_sort_maize = np.array([0.096, 0.193 + 0.196, 0.126 + 0.0
 data_maize = np.array([value_mm2_maize, value_mm2_avx_maize, value_mm2_olp_maize, value_mm2_hap_chain_maize, value_mm2_hap_chain_btk_maize, value_mm2_hap_chain_btk_sort_maize])
 
 # Data for barley with updated categories
-runtime_barley = [46035.151, 45560.924, 26910.393, 10761.150, 7651.801, 6063.077]  # in seconds
-value_mm2_barley = np.array([0.027, 0.272 + 0.161, 0.044 + 0.041, 0.354, 0.089, 0.012]) * runtime_barley[0]
-value_mm2_avx_barley = np.array([0.027, 0.274 + 0.159, 0.042 + 0.040, 0.383, 0.061, 0.013]) * runtime_barley[1]
+runtime_barley = [42612.805, 41985.786, 26910.393, 10761.150, 7651.801, 6063.077]  # in seconds
+value_mm2_barley = np.array([0.036, 0.287 + 0.169, 0.039 + 0.035, 0.327, 0.094, 0.012]) * runtime_barley[0]
+value_mm2_avx_barley = np.array([0.029, 0.289 + 0.170, 0.038 + 0.035, 0.333, 0.095, 0.012]) * runtime_barley[1]
 value_mm2_olp_barley = np.array([0.061, 0.444 + 0.262, 0.064 + 0.058, 0.003, 0.092, 0.016]) * runtime_barley[2]
 value_mm2_hap_chain_barley = np.array([0.154, 0.112 + 0.077, 0.188 + 0.183, 0.007, 0.238, 0.041]) * runtime_barley[3]
 value_mm2_hap_chain_btk_barley = np.array([0.221, 0.161 + 0.120, 0.041 + 0.041, 0.010, 0.348, 0.057]) * runtime_barley[4]

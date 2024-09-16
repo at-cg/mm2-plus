@@ -23,7 +23,12 @@ long_categories = [
 ]
 
 # Total runtimes for each dataset
-runtimes = [1237.404, 2040.404, 46035.151]
+runtimes = [1237.404, 2040.404, 42612.805]
+
+# % CPU usage for each dataset
+cpu_usages = [277, 303, 109]
+# divide by 4800 and multiply by 100 to get the percentage
+cpu_usages = [x/4800*100 for x in cpu_usages]
 
 # Create a figure with 3 subplots (one for each dataset)
 fig, axes = plt.subplots(1, 3, figsize=(16, 5))
@@ -36,7 +41,7 @@ def autopct_func(pct):
 for i, ax in enumerate(axes):
     wedges, texts, autotexts = ax.pie(data[i], labels=None, autopct=autopct_func, 
                                       colors=tab10_colors, startangle=90, textprops=dict(color="w"),
-                                      pctdistance=0.85)  # Shift value annotations outward
+                                      pctdistance=0.65)  # Shift value annotations outward
     ax.set_title(titles[i], fontsize=13)
 
     # Move value annotations outside the pie slices
@@ -45,7 +50,10 @@ for i, ax in enumerate(axes):
         autotext.set_fontsize(11)
     
     # Add runtime at the bottom of each pie chart
-    ax.text(0, -1.3, f'Runtime: {runtimes[i]:.2f} s', ha='center', fontsize=13)
+    ax.text(0, -1.3, f'Runtime: {runtimes[i]/3600:.2f}h', ha='center', fontsize=13)
+    
+    # Add % CPU usage below the runtime
+    ax.text(0, -1.5, f'CPU usage: {cpu_usages[i]:.2f}%', ha='center', fontsize=13)
 
 # Add a single legend using the long category names
 fig.legend(wedges, long_categories, loc='upper center', bbox_to_anchor=(0.5, 1.0), fontsize=10, ncol=6)
@@ -55,3 +63,6 @@ plt.subplots_adjust(top=0.85, bottom=0.2)
 
 # Save the plot to a consistent file name
 plt.savefig("pie_charts_profile.pdf", format='pdf', dpi=1200, bbox_inches='tight')
+
+# Show the plot (optional, if you're running this interactively)
+plt.show()
