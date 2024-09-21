@@ -354,7 +354,7 @@ static void mm_align_pair(void *km, const mm_mapopt_t *opt, int qlen, const uint
 		#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
 			ksw_extd2(km, qlen, qseq, tlen, tseq, 5, mat, opt->q, opt->e, opt->q2, opt->e2, w, zdrop, end_bonus, flag, ez);
 		#else
-			void ksw_extd2_sse(km, qlen, qseq, tlen, tseq, 5, mat, opt->q, opt->e, opt->q2, opt->e2, w, zdrop, end_bonus, flag, ez);
+			ksw_extd2_sse(km, qlen, qseq, tlen, tseq, 5, mat, opt->q, opt->e, opt->q2, opt->e2, w, zdrop, end_bonus, flag, ez);
 		#endif
 	}
 	if (mm_dbg_flag & MM_DBG_PRINT_ALN_SEQ) {
