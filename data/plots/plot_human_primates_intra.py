@@ -2,8 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
-plt.rcParams.update({'font.size': 12})  # Base font size scaled by 1.2
-
 # Updated categories based on the mapping
 categories = ['Computing anchors', 'Chaining (DP recursion)', 'Chaining (DP traceback)', 'Filtering primary chains', 'Base-to-base alignment', 'Miscellaneous']
 
@@ -41,7 +39,7 @@ for i, category in enumerate(categories):
 
 # Add runtime labels for human (in hours)
 for i, v in enumerate(runtime_human):
-    ax1.text(i - 0.25, bottom_human[i] + 50, f'{v/3600:.2f}h', color='black', fontweight='bold', fontsize=11)
+    ax1.text(i - 0.25, bottom_human[i] + 50, f'{v/3600:.2f}h', color='black', fontweight='bold', fontsize=15)
 
 # Plot bars for primates data
 bottom_primates = np.zeros(len(runtime_primates))
@@ -51,22 +49,22 @@ for i, category in enumerate(categories):
 
 # Add runtime labels for primates (in hours)
 for i, v in enumerate(runtime_primates):
-    ax2.text(i - 0.25, bottom_primates[i] + 50, f'{v/3600:.2f}h', color='black', fontweight='bold', fontsize=11)
+    ax2.text(i - 0.25, bottom_primates[i] + 50, f'{v/3600:.2f}h', color='black', fontweight='bold', fontsize=15)
 
 # Set titles for both subplots
-ax1.set_title('(C) Human-Human', fontsize=15, fontweight='bold')
-ax2.set_title('(D) Human-Bonobo', fontsize=15, fontweight='bold')
+ax1.set_title('(C) Human-Human', fontsize=18)
+ax2.set_title('(D) Human-Bonobo', fontsize=18)
 
 # Set y-axis labels
-ax1.set_ylabel('Runtime in hours', fontsize=15)
-ax2.set_ylabel('  ', fontsize=15)
+ax1.set_ylabel('Runtime (hours)', fontsize=18)
+ax2.set_ylabel('  ', fontsize=18)
 
 # Set x-tick labels for human and primates
 ax1.set_xticks(range(len(runtime_human)))
-ax1.set_xticklabels(['base', 'A', 'AO', 'AOC', 'AOBC', 'AOBCS'], rotation=0)
+ax1.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$', '$+O_5$'], rotation=0, fontsize=16)
 
 ax2.set_xticks(range(len(runtime_primates)))
-ax2.set_xticklabels(['base', 'A', 'AO', 'AOC', 'AOBC', 'AOBCS'], rotation=0)
+ax2.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$', '$+O_5$'], rotation=0, fontsize=16)
 
 # Adjust y-limits to be non-normalized
 ax1.set_ylim(0, max(bottom_human) + 200)
@@ -74,20 +72,20 @@ ax2.set_ylim(0, max(bottom_primates) + 200)
 
 # Add yticks as runtime in hours
 ax1.set_yticks(range(0, int(max(bottom_human) + 100), 500))
-ax1.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_human) + 100), 500)])
+ax1.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_human) + 100), 500)], fontsize=16)
 ax2.set_yticks(range(0, int(max(bottom_primates) + 100), 500))
-ax2.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_primates) + 100), 500)])
+ax2.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_primates) + 100), 500)], fontsize=16)
 
 # Grid lines for y-axis
 ax1.grid(axis='y', linestyle='--', zorder=0)
 ax2.grid(axis='y', linestyle='--', zorder=0)
 
 # Set xlabel for both subplots as 'Optimizations'
-ax1.set_xlabel('Optimizations', fontsize=15)
-ax2.set_xlabel('Optimizations', fontsize=15)
+ax1.set_xlabel('Optimizations', fontsize=18)
+ax2.set_xlabel('Optimizations', fontsize=18)
 
 # Adding a shared legend at the top
-fig.legend(categories, loc='upper center', bbox_to_anchor=(0.5, 1.10), fontsize=12, ncol=6)
+# fig.legend(categories, loc='upper center', bbox_to_anchor=(0.5, 1.10), fontsize=12, ncol=6)
 
 plt.tight_layout()
 plt.savefig('combined_human_primates_rt2.pdf', bbox_inches='tight', format='pdf', dpi=1200)

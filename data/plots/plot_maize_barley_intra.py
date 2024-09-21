@@ -2,8 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
-plt.rcParams.update({'font.size': 12})  # Base font size scaled by 1.2
-
 # Updated categories based on the mapping
 categories = ['Computing anchors', 'Chaining (DP recursion)', 'Chaining (DP traceback)', 'Filtering primary chains', 'Base-to-base alignment', 'Miscellaneous']
 
@@ -41,7 +39,7 @@ for i, category in enumerate(categories):
 
 # Add runtime labels for maize (in hours)
 for i, v in enumerate(runtime_maize):
-    ax1.text(i - 0.25, bottom_maize[i] + 500, f'{v/3600:.2f}h', color='black', fontweight='bold', fontsize=11)
+    ax1.text(i - 0.25, bottom_maize[i] + 500, f'{v/3600:.2f}h', color='black', fontweight='bold', fontsize=15)
 
 # Plot bars for barley data
 bottom_barley = np.zeros(len(runtime_barley))
@@ -51,22 +49,22 @@ for i, category in enumerate(categories):
 
 # Add runtime labels for barley (in hours)
 for i, v in enumerate(runtime_barley):
-    ax2.text(i - 0.25, bottom_barley[i] + 1000, f'{v/3600:.2f}h', color='black', fontweight='bold', fontsize=11)
+    ax2.text(i - 0.25, bottom_barley[i] + 1000, f'{v/3600:.2f}h', color='black', fontweight='bold', fontsize=15)
 
 # Set titles for both subplots
-ax1.set_title('(A) Maize-Maize', fontsize=15, fontweight='bold')
-ax2.set_title('(B) Barley-Barley', fontsize=15, fontweight='bold')
+ax1.set_title('(A) Maize-Maize', fontsize=18)
+ax2.set_title('(B) Barley-Barley', fontsize=18)
 
 # Set y-axis labels
-ax1.set_ylabel('Runtime in hours', fontsize=15)
-ax2.set_ylabel('  ', fontsize=15)
+ax1.set_ylabel('Runtime (hours)', fontsize=18)
+ax2.set_ylabel('  ', fontsize=18)
 
 # Set x-tick labels for maize and barley
 ax1.set_xticks(range(len(runtime_maize)))
-ax1.set_xticklabels(['base', 'A', 'AO', 'AOC', 'AOBC', 'AOBCS'], rotation=0)
+ax1.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$', '$+O_5$'], rotation=0, fontsize=16)
 
 ax2.set_xticks(range(len(runtime_barley)))
-ax2.set_xticklabels(['base', 'A', 'AO', 'AOC', 'AOBC', 'AOBCS'], rotation=0)
+ax2.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$', '$+O_5$'], rotation=0, fontsize=16)
 
 # Adjust y-limits to be non-normalized
 ax1.set_ylim(0, max(bottom_maize) + 3000)
@@ -74,20 +72,20 @@ ax2.set_ylim(0, max(bottom_barley) + 5000)
 
 # Add yticks as runtime in hours
 ax1.set_yticks(range(0, int(max(bottom_maize) + 1000), 5000))
-ax1.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_maize) + 1000), 5000)])
+ax1.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_maize) + 1000), 5000)], fontsize=16)
 ax2.set_yticks(range(0, int(max(bottom_barley) + 1000), 10000))
-ax2.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_barley) + 1000), 10000)])
+ax2.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_barley) + 1000), 10000)], fontsize=16)
 
 # Grid lines for y-axis
 ax1.grid(axis='y', linestyle='--', zorder=0)
 ax2.grid(axis='y', linestyle='--', zorder=0)
 
 # Set xlabel for both subplots as 'Optimizations'
-ax1.set_xlabel('Optimizations', fontsize=15)
-ax2.set_xlabel('Optimizations', fontsize=15)
+ax1.set_xlabel('Optimizations', fontsize=18)
+ax2.set_xlabel('Optimizations', fontsize=18)
 
 # Adding a shared legend at the top
-fig.legend(categories, loc='upper center', bbox_to_anchor=(0.5, 1.10), fontsize=12, ncol=6)
+fig.legend(categories, loc='upper center', bbox_to_anchor=(0.5, 1.20), fontsize=16, ncol=3)
 
 plt.tight_layout()
 plt.savefig('combined_maize_barley_rt2.pdf', bbox_inches='tight', format='pdf', dpi=1200)

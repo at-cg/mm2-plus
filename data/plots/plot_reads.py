@@ -1,77 +1,62 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Data for HiFi, ONT, and All-vs-All alignments (in hours)
-runtimes_minimap2 = [4878.840 / 3600, 7364.320 / 3600, 27098.373 / 3600]
-runtimes_mm2_plus = [2500.657 / 3600, 4487.814 / 3600, 16426.840 / 3600]
+# Corrected data for HiFi, ONT, and All-vs-All alignments (in hours)
+runtimes_minimap2 = [2076.204 / 3600, 4061.623 / 3600, 1361.325 / 3600, 9529.873 / 3600, 21766.328 / 3600]
+runtimes_mm2_plus = [1629.453 / 3600, 2575.712 / 3600, 977.766 / 3600, 4889.588 / 3600, 15763.013 / 3600]
+
+# Titles for each subplot (swapped ONT UL and ONT Duplex)
+titles = ['(A) HiFi', '(B) ONT Simplex', '(C) ONT Duplex', '(D) ONT Ultra-Long', '(E) ONT all-vs-all']
 
 # Bar width and gap size
-bar_width = 0.1
-gap = 0.05
+bar_width = 0.05
+gap = 0.03
 
 # Colors
 colors = plt.get_cmap('tab10').colors
 
-# Create a figure with 3 subplots
-fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(12, 3))
+# Create a figure with 5 subplots
+fig, axes = plt.subplots(1, 5, figsize=(14, 3.2))
 
-# Plotting HiFi alignment runtimes with a gap
-bars_minimap2_hifi = ax1.bar(0 - (bar_width + gap)/2, runtimes_minimap2[0], bar_width, color=colors[0], zorder=3)
-bars_mm2_plus_hifi = ax1.bar(0 + (bar_width + gap)/2, runtimes_mm2_plus[0], bar_width, color=colors[1], zorder=3)
+# Plotting runtimes for each technology
+for i, ax in enumerate(axes):
+    # Plot minimap2 and mm2-plus runtimes
+    ax.bar(- (bar_width + gap)/2, runtimes_minimap2[i], bar_width, color=colors[0], zorder=3)
+    ax.bar((bar_width + gap)/2, runtimes_mm2_plus[i], bar_width, color=colors[1], zorder=3)
+    
+    # Adding runtime values
+    ax.text(- (bar_width + gap)/2, runtimes_minimap2[i], f'{runtimes_minimap2[i]:.2f}h', ha='center', va='bottom', fontsize=12, fontweight='bold')
+    ax.text((bar_width + gap)/2, runtimes_mm2_plus[i], f'{runtimes_mm2_plus[i]:.2f}h', ha='center', va='bottom', fontsize=12, fontweight='bold')
+    
+    # Formatting plot
+    ax.set_xticks([- (bar_width + gap)/2, (bar_width + gap)/2])
+    ax.set_xticklabels(['minimap2', 'mm2-plus'], rotation=0, fontsize=13)
+    ax.set_title(titles[i], pad=15, fontsize=15)
+    
+    # Add grid lines
+    ax.grid(axis='y', linestyle='--', zorder=0)
 
-# Adding runtime values for HiFi
-ax1.text(0 - (bar_width + gap)/2, runtimes_minimap2[0], f'{runtimes_minimap2[0]:.2f}h', ha='center', va='bottom')
-ax1.text(0 + (bar_width + gap)/2, runtimes_mm2_plus[0], f'{runtimes_mm2_plus[0]:.2f}h', ha='center', va='bottom')
+# Set Y-axis limits for each plot (customized based on the range of the data)
+axes[0].set_ylim(0, 0.65)  # HiFi
+axes[1].set_ylim(0, 1.27)  # ONT Simplex
+axes[2].set_ylim(0, 0.43)  # ONT Duplex
+axes[3].set_ylim(0, 3.0)  # ONT UL
+axes[4].set_ylim(0, 6.8)  # ONT all-vs-all
 
-# Formatting HiFi plot
-ax1.set_xticks([0])
-ax1.set_xticklabels(['PacBio HiFi'])
-ax1.set_ylabel('Runtime (hours)')
-ax1.set_title('(A) HG002_HiFi', pad=15)  # Adding gap between title and plot
+# add axes[0] y label as runtime in hours
+axes[0].set_ylabel('Runtime (hours)', fontsize=15)
+#set fontsize=14 for yticks
+axes[0].tick_params(axis='y', labelsize=14)
+axes[1].tick_params(axis='y', labelsize=14)
+axes[2].tick_params(axis='y', labelsize=14)
+axes[3].tick_params(axis='y', labelsize=14)
+axes[4].tick_params(axis='y', labelsize=14)
 
-# Plotting ONT alignment runtimes with a gap
-bars_minimap2_ont = ax2.bar(0 - (bar_width + gap)/2, runtimes_minimap2[1], bar_width, color=colors[0], zorder=3)
-bars_mm2_plus_ont = ax2.bar(0 + (bar_width + gap)/2, runtimes_mm2_plus[1], bar_width, color=colors[1], zorder=3)
-
-# Adding runtime values for ONT
-ax2.text(0 - (bar_width + gap)/2, runtimes_minimap2[1], f'{runtimes_minimap2[1]:.2f}h', ha='center', va='bottom')
-ax2.text(0 + (bar_width + gap)/2, runtimes_mm2_plus[1], f'{runtimes_mm2_plus[1]:.2f}h', ha='center', va='bottom')
-
-# Formatting ONT plot
-ax2.set_xticks([0])
-ax2.set_xticklabels(['ONT'])
-ax2.set_ylabel(' ')
-ax2.set_title('(B) HG002_ONT', pad=15)  # Adding gap between title and plot
-
-# Plotting All-vs-All alignment runtimes with a gap
-bars_minimap2_all = ax3.bar(0 - (bar_width + gap)/2, runtimes_minimap2[2], bar_width, color=colors[0], zorder=3)
-bars_mm2_plus_all = ax3.bar(0 + (bar_width + gap)/2, runtimes_mm2_plus[2], bar_width, color=colors[1], zorder=3)
-
-# Adding runtime values for All-vs-All
-ax3.text(0 - (bar_width + gap)/2, runtimes_minimap2[2], f'{runtimes_minimap2[2]:.2f}h', ha='center', va='bottom')
-ax3.text(0 + (bar_width + gap)/2, runtimes_mm2_plus[2], f'{runtimes_mm2_plus[2]:.2f}h', ha='center', va='bottom')
-
-# Formatting All-vs-All plot
-ax3.set_xticks([0])
-ax3.set_xticklabels(['ONT'])
-ax3.set_ylabel(' ')
-ax3.set_title('(C) HG002_ONT_ava', pad=15)  # Adding gap between title and plot
-
-# Add grid lines
-ax1.grid(axis='y', linestyle='--', zorder=0)
-ax2.grid(axis='y', linestyle='--', zorder=0)
-ax3.grid(axis='y', linestyle='--', zorder=0)
-
-# Set Y-axis limits
-ax1.set_ylim(0, 1.50)
-ax2.set_ylim(0, 2.30)
-ax3.set_ylim(0, 8.3)
-
-# Adding one common legend for all subplots
-fig.legend(['minimap2', 'mm2-plus'], loc='upper right', bbox_to_anchor=(1.1, 0.85))
+# Adjust the gap between subplots
+plt.subplots_adjust(wspace=0.3)  # Increase the gap between the plots
 
 # Adding common X-axis label
-fig.supxlabel('Long-read sequencing technology')
+fig.supxlabel('Tools', fontsize=15)
 
 # Adjust the layout
 plt.tight_layout()
