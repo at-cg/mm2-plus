@@ -407,6 +407,8 @@ static inline int32_t comput_sc(const mm128_t *ai, const mm128_t *aj, int32_t ma
  *   u[]: score<<32 | #anchors (sum of lower 32 bits of u[] is the returned length of a[])
  * input a[] is deallocated on return
  */
+
+
 mm128_t *mg_lchain_dp(int max_dist_x, int max_dist_y, int bw, int max_skip, int max_iter, int min_cnt, int min_sc, float chn_pen_gap, float chn_pen_skip,
 					  int is_cdna, int n_seg, int64_t n, mm128_t *a, int *n_u_, uint64_t **_u, void *km)
 { // TODO: make sure this works when n has more than 32 bits

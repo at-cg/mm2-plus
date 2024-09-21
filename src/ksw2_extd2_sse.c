@@ -3,6 +3,9 @@
 #include <assert.h>
 #include "ksw2.h"
 
+// for AVX512 and AVX2
+#include "ksw2_extd2_avx.h"
+
 #ifdef __SSE2__
 #ifdef USE_SIMDE
 #include <simde/x86/sse2.h>

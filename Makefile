@@ -1,4 +1,5 @@
-CPPFLAGS=	-g -std=c++2a -march=native -O3 -w -DHAVE_KALLOC -fopenmp
+CPPFLAGS=	-g -std=c++2a -O3 -w -DHAVE_KALLOC -fopenmp
+EXTRAFLAGS=
 INCLUDES=
 OBJS=		src/kthread.o src/kalloc.o src/misc.o src/bseq.o src/sketch.o src/sdust.o src/options.o src/index.o \
 			src/lchain.o src/align.o src/hit.o src/seed.o src/map.o src/format.o src/pe.o src/esterr.o src/splitidx.o \
@@ -54,6 +55,7 @@ ifeq ($(sse2only),) # if sse2only is not defined
 		CPPFLAGS+=-DALIGN_AVX -DAPPLY_AVX2
 	endif
 	OBJS+=src/ksw2_extz2_sse41.o src/ksw2_extd2_sse41.o src/ksw2_exts2_sse41.o src/ksw2_extz2_sse2.o src/ksw2_extd2_sse2.o src/ksw2_exts2_sse2.o src/ksw2_dispatch.o src/ksw2_extd2_avx.o
+	EXTRAFLAGS+=-march=native
 else                # if sse2only is defined
 	OBJS+=src/ksw2_extz2_sse.o src/ksw2_extd2_sse.o src/ksw2_exts2_sse.o
 endif
@@ -126,6 +128,12 @@ src/ksw2_exts2_sse2.o:src/ksw2_exts2_sse.c src/ksw2.h src/kalloc.h
 
 src/ksw2_dispatch.o:src/ksw2_dispatch.c src/ksw2.h
 		$(CXX) -c $(CPPFLAGS) -msse4.1 -DKSW_CPU_DISPATCH $(INCLUDES) $< -o $@
+
+src/lchain.o:src/lchain.c src/parallel_chaining_v2_22.h
+		$(CXX) -c $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
+
+src/ksw2_extd2_avx.o:src/ksw2_extd2_avx.c src/ksw2.h src/kalloc.h
+		$(CXX) -c $(CPPFLAGS) -march=native $(INCLUDES) $< -o $@
 
 # NEON-specific targets on ARM
 
