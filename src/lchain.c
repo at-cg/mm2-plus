@@ -8,21 +8,20 @@
 #include "krmq.h"
 #include <stdbool.h>
 #include <omp.h>
-
-// Parallel SIMD Chaining
-#include "parallel_chaining_v2_22.h"
-
 // CPP
 #include <chrono>	// for timing	
 #include <iostream>
 #include <vector>
 #include <algorithm>
 #include <cassert>
-#include <immintrin.h> // For prefetching instructions
 #include <future>
 #include <map>
-#include <immintrin.h>
 #include <cstring>
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+    #include <immintrin.h>  // Include this header only for x86 architectures
+	#include "parallel_chaining_v2_22.h"
+#endif
 
 extern float mean_itr_1_, mean_itr_2_;
 extern int32_t max_itr_1, max_itr_2;
@@ -233,11 +232,14 @@ uint64_t *mg_chain_backtrack_par(void *km, int64_t n, int32_t *f, int64_t *p, in
 		std::vector<uint64_t> u_vec;
 		int64_t n_v = 0;
 		int32_t n_u = 0;
-
-		int64_t prefetch_dist = 16; // Larger prefetch distance causes cache pollution due to parallelism
+		#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+			int64_t prefetch_dist = 16; // Larger prefetch distance causes cache pollution due to parallelism
+		#endif
 		for (k = n_z - 1; k >= 0; --k) 
 		{ // precompute n_u
-			if (k - prefetch_dist >=0 ) _mm_prefetch(reinterpret_cast<const char*>(&p_t_vec[z[k - prefetch_dist].y].second), _MM_HINT_T0); // Asynchronous prefetching
+			#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+				if (k - prefetch_dist >=0 ) _mm_prefetch(reinterpret_cast<const char*>(&p_t_vec[z[k - prefetch_dist].y].second), _MM_HINT_T0); // Asynchronous prefetching
+			#endif
 			if (p_t_vec[z[k].y].second == 0) {
 				int64_t n_v0 = n_v, end_i;
 				int32_t sc;
@@ -306,14 +308,18 @@ static mm128_t *compact_a(void *km, int32_t n_u, uint64_t *u, int32_t n_v, int32
 	{
 		#if defined(PAR_CHAIN_1) || defined(PAR_CHAIN_2) || defined(PAR_BTK)
 			b = Kmalloc(km, mm128_t, n_v);
-			const int64_t PREF_DIST = 64;
+			#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+				const int64_t PREF_DIST = 64;
+			#endif
 			for (i = 0, k = 0; i < n_u; ++i) {
 				int32_t k0 = k, ni = (int32_t)u[i];
 				for (j = 0; j < ni; ++j)
 				{
 					int64_t idx = k0 + (ni - j - 1);
-					int64_t PREF_idx = idx - PREF_DIST;
-					if (PREF_idx >= 0 && PREF_idx >= (k0 + ni - 1)) _mm_prefetch(reinterpret_cast<const char*>(&a[v[idx - PREF_DIST]]), _MM_HINT_T0); // Asynchronous prefetching
+					#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+						int64_t PREF_idx = idx - PREF_DIST;
+						if (PREF_idx >= 0 && PREF_idx >= (k0 + ni - 1)) _mm_prefetch(reinterpret_cast<const char*>(&a[v[idx - PREF_DIST]]), _MM_HINT_T0); // Asynchronous prefetching
+					#endif
 					b[k++] = a[v[idx]];
 				}
 			}

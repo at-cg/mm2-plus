@@ -5,8 +5,10 @@
 #include "minimap.h"
 #include "mmpriv.h"
 #include "ksw2.h"
-#include "ksw2_extd2_avx.h"
-#include <x86intrin.h>
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+	#include "ksw2_extd2_avx.h"
+#endif
 
 static void ksw_gen_simple_mat(int m, int8_t *mat, int8_t a, int8_t b, int8_t sc_ambi)
 {

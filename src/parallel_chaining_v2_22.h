@@ -25,6 +25,7 @@ Authors: Saurabh Kalikar <saurabh.kalikar@intel.com>; Vasimuddin Md <vasimuddin.
 *****************************************************************************************/
 
 #include <immintrin.h>
+#include <emmintrin.h>
 #include <assert.h>
 #include <iostream>
 #include <stdio.h>

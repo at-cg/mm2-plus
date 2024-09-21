@@ -10,7 +10,6 @@
 #include <omp.h>
 #include <algorithm>
 #include <tuple>
-#include <immintrin.h>
 #include <fstream>
 
 #define MM_PARENT_UNSET   (-1)

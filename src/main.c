@@ -6,8 +6,6 @@
 #include "minimap.h"
 #include "mmpriv.h"
 #include "ketopt.h"
-#include <x86intrin.h>
-#include <immintrin.h>
 #include <sys/time.h>
 #include <string>
 #include <map>
