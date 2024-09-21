@@ -156,7 +156,7 @@ depend:
 
 # DO NOT DELETE
 
-src/align.o: src/minimap.h src/mmpriv.h src/bseq.h src/kseq.h src/ksw2.h src/kalloc.h src/ksw2_extd2_avx.h
+src/align.o: src/minimap.h src/mmpriv.h src/bseq.h src/kseq.h src/ksw2.h src/kalloc.h
 src/bseq.o: src/bseq.h src/kvec.h src/kalloc.h src/kseq.h
 src/esterr.o: src/mmpriv.h src/minimap.h src/bseq.h src/kseq.h
 src/example.o: src/minimap.h src/kseq.h

@@ -4,7 +4,9 @@
 #include "ksw2.h"
 
 // for AVX512 and AVX2
-#include "ksw2_extd2_avx.h"
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+	#include "ksw2_extd2_avx.h"
+#endif
 
 #ifdef __SSE2__
 #ifdef USE_SIMDE
