@@ -178,7 +178,6 @@ int main(int argc, char *argv[])
 	FILE *fp_help = stderr;
 	mm_idx_reader_t *idx_rdr;
 	mm_idx_t *mi;
-	max_thds = omp_get_max_threads();
 
 	mm_verbose = 3;
 	liftrlimit();
@@ -236,7 +235,6 @@ int main(int argc, char *argv[])
 		else if (c == 'b') opt.transition = atoi(o.arg);
 		else if (c == 's') opt.min_dp_max = atoi(o.arg);
 		else if (c == 'C') opt.noncan = atoi(o.arg);
-		else if (c == 'Z') max_thds = atoi(o.arg);
 		else if (c == 'I') ipt.batch_size = mm_parse_num(o.arg);
 		else if (c == 'K') opt.mini_batch_size = mm_parse_num(o.arg);
 		else if (c == 'e') opt.occ_dist = mm_parse_num(o.arg);
@@ -423,7 +421,6 @@ int main(int argc, char *argv[])
 		fprintf(fp_help, "    --eqx        write =/X CIGAR operators\n");
 		fprintf(fp_help, "    -Y           use soft clipping for supplementary alignments\n");
 		fprintf(fp_help, "    -t INT       number of threads [%d]\n", n_threads);
-		fprintf(fp_help, "    -Z INT       Maximum threads for parallel chaining [%d]\n", max_thds);
 		fprintf(fp_help, "    -K NUM       minibatch size for mapping [500M]\n");
 //		fprintf(fp_help, "    -v INT       verbose level [%d]\n", mm_verbose);
 		fprintf(fp_help, "    --version    show version number\n");
@@ -463,6 +460,8 @@ int main(int argc, char *argv[])
 			gettimeofday(&start_idx, NULL);
 		#endif
 	}
+
+	max_thds = n_threads; // for multi-threading of chain_dp
 
 	while ((mi = mm_idx_reader_read(idx_rdr, n_threads)) != 0) {
 		int ret;
