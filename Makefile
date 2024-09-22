@@ -1,4 +1,4 @@
-CPPFLAGS=	-g -std=c++2a -O3 -w -DHAVE_KALLOC
+CPPFLAGS=	-g -std=c++2a -O3 -w -DHAVE_KALLOC -ljemalloc
 EXTRAFLAGS=
 INCLUDES=
 OBJS=		src/kthread.o src/kalloc.o src/misc.o src/bseq.o src/sketch.o src/sdust.o src/options.o src/index.o \
@@ -130,22 +130,22 @@ src/ksw2_dispatch.o:src/ksw2_dispatch.c src/ksw2.h
 		$(CXX) -c $(CPPFLAGS) -msse4.1 -DKSW_CPU_DISPATCH $(INCLUDES) $< -o $@
 
 src/lchain.o:src/lchain.c src/parallel_chaining_v2_22.h
-		$(CXX) -c -ljemalloc -fopenmp $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
-
-src/hit.o:src/hit.c
-		$(CXX) -c -ljemalloc -fopenmp $(CPPFLAGS) $(INCLUDES) $< -o $@
-
-src/esterr.o:src/esterr.c
-		$(CXX) -c -fopenmp $(CPPFLAGS) $(INCLUDES) $< -o $@
+		$(CXX) -c -fopenmp $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
 
 src/parallel_sort.o:src/parallel_sort.cpp
-		$(CXX) -c -ljemalloc -fopenmp $(CPPFLAGS) $(INCLUDES) $< -o $@
+		$(CXX) -c -fopenmp $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
+
+src/hit.o:src/hit.c
+		$(CXX) -c -fopenmp $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
+
+src/esterr.o:src/esterr.c
+		$(CXX) -c -fopenmp $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
 
 src/kthread.o:src/kthread.c
-		$(CXX) -c -fopenmp $(CPPFLAGS) $(INCLUDES) $< -o $@
+		$(CXX) -c -fopenmp $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
 
 src/ksw2_extd2_avx.o:src/ksw2_extd2_avx.c src/ksw2.h src/kalloc.h
-		$(CXX) -c $(CPPFLAGS) -march=native $(INCLUDES) $< -o $@
+		$(CXX) -c $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
 
 # NEON-specific targets on ARM
 
@@ -167,7 +167,6 @@ depend:
 		(LC_ALL=C; export LC_ALL; makedepend -Y -- $(CPPFLAGS) -- src/*.c)
 
 # DO NOT DELETE
-
 src/align.o: src/minimap.h src/mmpriv.h src/bseq.h src/kseq.h src/ksw2.h src/kalloc.h
 src/bseq.o: src/bseq.h src/kvec.h src/kalloc.h src/kseq.h
 src/esterr.o: src/mmpriv.h src/minimap.h src/bseq.h src/kseq.h

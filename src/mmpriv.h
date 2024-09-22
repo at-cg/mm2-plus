@@ -6,8 +6,6 @@
 #include "bseq.h"
 #include "kseq.h"
 #include <sys/time.h>
-
-#include <omp.h>
 #include <algorithm>
 #include <tuple>
 #include <fstream>

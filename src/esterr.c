@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "mmpriv.h"
+#include <omp.h>
 
 extern int32_t num_threads_b2b, is_g2g_aln;
 

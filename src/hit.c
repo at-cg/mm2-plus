@@ -6,6 +6,7 @@
 #include "khash.h"
 #include <stdlib.h>
 #include "IntervalTree.h"
+#include <omp.h>
 
 extern int32_t num_threads_b2b, is_g2g_aln;
 extern float mm_set_time_, mm_set_time;
