@@ -103,7 +103,7 @@ mm_reg1_t *mm_gen_regs(void *km, uint32_t hash, int qlen, int n_u, uint64_t *u, 
 	if (is_g2g_aln)
 	{
 		#if defined(PAR_SORT)
-			parallel_sort(z, n_u);
+			parallel_sort(z, n_u, num_threads_b2b);
 		#else
 			radix_sort_128x(z, z + n_u);
 		#endif
@@ -451,8 +451,8 @@ void mm_hit_sort(void *km, int *n_regs, mm_reg1_t *r, float alt_diff_frac)
 	if (is_g2g_aln)
 	{
 		#if defined(PAR_SORT)
-			parallel_sort(aux, n_aux);
-		#else
+			parallel_sort(aux, n_aux, num_threads_b2b);
+		#else 
 			radix_sort_128x(aux, aux + n_aux);
 		#endif
 	}else

@@ -218,7 +218,7 @@ uint64_t *mg_chain_backtrack_par(void *km, int64_t n, int32_t *f, int64_t *p, in
 		if (is_g2g_aln)
 		{
 			#if defined(PAR_SORT) 
-				parallel_sort(z.data(), n_z);
+				parallel_sort(z.data(), n_z, num_threads_b2b);
 			#else
 				radix_sort_128x(z.data(), z.data() + n_z);
 			#endif
@@ -356,7 +356,7 @@ static mm128_t *compact_a(void *km, int32_t n_u, uint64_t *u, int32_t n_v, int32
 	if (is_g2g_aln)
 	{
 		#if defined(PAR_SORT) 
-			parallel_sort(w, n_u);
+			parallel_sort(w, n_u, num_threads_b2b);
 		#else
 			radix_sort_128x(w, w + n_u);
 		#endif

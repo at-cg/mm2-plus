@@ -44,7 +44,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-void parallel_sort(mm128_t* z, size_t n_u);
+void parallel_sort(mm128_t* z, size_t n_u, int32_t n_thds);
 
 #ifdef __cplusplus
 }

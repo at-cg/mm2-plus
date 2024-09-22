@@ -2,7 +2,7 @@
 #include "kalloc.h"
 #include "ksort.h"
 
-extern int32_t num_threads_b2b;
+extern int32_t max_thds;
 
 void mm_seed_mz_flt(void *km, mm128_v *mv, int32_t q_occ_max, float q_occ_frac)
 {
@@ -12,7 +12,7 @@ void mm_seed_mz_flt(void *km, mm128_v *mv, int32_t q_occ_max, float q_occ_frac)
 	a = Kmalloc(km, mm128_t, mv->n);
 	for (i = 0; i < mv->n; ++i)
 		a[i].x = mv->a[i].x, a[i].y = i;
-	parallel_sort(a, mv->n);
+	parallel_sort(a, mv->n, max_thds);
 	for (st = 0, i = 1; i <= mv->n; ++i) {
 		if (i == mv->n || a[i].x != a[st].x) {
 			int32_t cnt = i - st;

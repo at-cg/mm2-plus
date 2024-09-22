@@ -212,7 +212,7 @@ static mm128_t *collect_seed_hits(void *km, const mm_mapopt_t *opt, int max_occ,
 	if (is_g2g_aln)
 	{
 		#if defined(PAR_SORT) 
-			parallel_sort(a, *n_a);
+			parallel_sort(a, *n_a, num_threads_b2b);
 		#else
 			radix_sort_128x(a, a + (*n_a));
 		#endif
@@ -257,6 +257,13 @@ void mm_map_frag(const mm_idx_t *mi, int n_segs, const int *qlens, const char **
 	km_stat_t kmst;
 	float chn_pen_gap, chn_pen_skip;
 	float extra_time = 0.0;
+
+	
+	// Set Number of Threads
+	int32_t max_threads = sysconf(_SC_NPROCESSORS_ONLN);
+	max_threads = std::min(max_threads, max_thds);
+	int32_t min_threads = max_threads/n_query < max_threads ? max_threads/n_query : max_threads;
+	num_threads_b2b = 1 > min_threads ? 1 : min_threads;
 
 	for (i = 0, qlen_sum = 0; i < n_segs; ++i)
 		qlen_sum += qlens[i], n_regs[i] = 0, regs[i] = 0;
@@ -307,13 +314,6 @@ void mm_map_frag(const mm_idx_t *mi, int n_segs, const int *qlens, const char **
 		max_chain_gap_ref = opt->max_frag_len - qlen_sum;
 		if (max_chain_gap_ref < opt->max_gap) max_chain_gap_ref = opt->max_gap;
 	} else max_chain_gap_ref = opt->max_gap;
-
-	// Compute number of threads for b2b
-	// Set Number of Threads
-	int32_t max_threads = sysconf(_SC_NPROCESSORS_ONLN);
-	max_threads = std::min(max_threads, max_thds);
-	int32_t min_threads = max_threads/n_query < max_threads ? max_threads/n_query : max_threads;
-	num_threads_b2b = 1 > min_threads ? 1 : min_threads;
 	
 	chn_pen_gap  = opt->chain_gap_scale * 0.01 * mi->k;
 	chn_pen_skip = opt->chain_skip_scale * 0.01 * mi->k;
@@ -342,7 +342,7 @@ void mm_map_frag(const mm_idx_t *mi, int n_segs, const int *qlens, const char **
 			if (is_g2g_aln)
 			{
 				#if defined(PAR_SORT) 
-					parallel_sort(a, n_a);
+					parallel_sort(a, n_a, num_threads_b2b);
 				#else
 					radix_sort_128x(a, a + n_a);
 				#endif

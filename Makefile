@@ -1,4 +1,4 @@
-CPPFLAGS=	-g -std=c++2a -O3 -w -DHAVE_KALLOC -fopenmp
+CPPFLAGS=	-g -std=c++2a -O3 -w -DHAVE_KALLOC
 EXTRAFLAGS=
 INCLUDES=
 OBJS=		src/kthread.o src/kalloc.o src/misc.o src/bseq.o src/sketch.o src/sdust.o src/options.o src/index.o \
@@ -6,7 +6,7 @@ OBJS=		src/kthread.o src/kalloc.o src/misc.o src/bseq.o src/sketch.o src/sdust.o
 			src/ksw2_ll_sse.o src/parallel_sort.o
 PROG=		minimap2
 PROG_EXTRA=	sdust minimap2-lite
-LIBS=		-lm -lz -lpthread
+LIBS=		-fopenmp -lm -lz -lpthread
 
 ifeq ($(profile),1)
 	CPPFLAGS+=-DPROFILE
@@ -29,19 +29,19 @@ ifeq ($(par_btk),1)
 endif
 
 ifeq ($(par_chain_1),1)
-	CPPFLAGS+=-DPAR_CHAIN_1 -ljemalloc
+	CPPFLAGS+=-DPAR_CHAIN_1
 endif
 
 ifeq ($(par_chain_2),1)
-	CPPFLAGS+=-DPAR_CHAIN_2 -ljemalloc
+	CPPFLAGS+=-DPAR_CHAIN_2
 endif
 
 ifeq ($(get_dist),1)
-	CPPFLAGS+=-DGET_DIST -DPAR_CHAIN_1 -ljemalloc
+	CPPFLAGS+=-DGET_DIST -DPAR_CHAIN_1
 endif
 
 ifeq ($(all),1)
-	CPPFLAGS+=-DPAR_BTK -DPAR_SORT -DPAR_CHAIN_1 -DPAR_DP_CHAIN -DOPT_OLP -ljemalloc
+	CPPFLAGS+=-DPAR_BTK -DPAR_SORT -DPAR_CHAIN_1 -DPAR_DP_CHAIN -DOPT_OLP
 	avx=1
 endif
 
@@ -130,7 +130,19 @@ src/ksw2_dispatch.o:src/ksw2_dispatch.c src/ksw2.h
 		$(CXX) -c $(CPPFLAGS) -msse4.1 -DKSW_CPU_DISPATCH $(INCLUDES) $< -o $@
 
 src/lchain.o:src/lchain.c src/parallel_chaining_v2_22.h
-		$(CXX) -c $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
+		$(CXX) -c -ljemalloc -fopenmp $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
+
+src/hit.o:src/hit.c
+		$(CXX) -c -ljemalloc -fopenmp $(CPPFLAGS) $(INCLUDES) $< -o $@
+
+src/esterr.o:src/esterr.c
+		$(CXX) -c -fopenmp $(CPPFLAGS) $(INCLUDES) $< -o $@
+
+src/parallel_sort.o:src/parallel_sort.cpp
+		$(CXX) -c -ljemalloc -fopenmp $(CPPFLAGS) $(INCLUDES) $< -o $@
+
+src/kthread.o:src/kthread.c
+		$(CXX) -c -fopenmp $(CPPFLAGS) $(INCLUDES) $< -o $@
 
 src/ksw2_extd2_avx.o:src/ksw2_extd2_avx.c src/ksw2.h src/kalloc.h
 		$(CXX) -c $(CPPFLAGS) -march=native $(INCLUDES) $< -o $@
