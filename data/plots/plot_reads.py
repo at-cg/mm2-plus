@@ -6,7 +6,7 @@ runtimes_minimap2 = [2076.204 / 3600, 4061.623 / 3600, 1361.325 / 3600, 9529.873
 runtimes_mm2_plus = [1629.453 / 3600, 2575.712 / 3600, 977.766 / 3600, 4889.588 / 3600, 15763.013 / 3600]
 
 # Titles for each subplot (swapped ONT UL and ONT Duplex)
-titles = ['(A) HiFi', '(B) ONT Simplex', '(C) ONT Duplex', '(D) ONT Ultra-Long', '(E) ONT all-vs-all']
+titles = ['(A) PacBio HiFi', '(B) ONT Simplex', '(C) ONT Duplex', '(D) ONT Ultra-Long', '(E) ONT all-vs-all']
 
 # Bar width and gap size
 bar_width = 0.05
