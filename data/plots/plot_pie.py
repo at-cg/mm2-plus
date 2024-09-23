@@ -51,7 +51,7 @@ for i, ax in enumerate(axes):
     ax.text(0, -1.3, f'Runtime: {runtimes[i]/3600:.2f}h', ha='center', fontsize=14)
     
     # Add % CPU usage below the runtime
-    ax.text(0, -1.5, f'CPU usage: {cpu_usages[i]:.2f}%', ha='center', fontsize=14)
+    ax.text(0, -1.5, f'CPU efficiency: {cpu_usages[i]:.2f}%', ha='center', fontsize=14)
 
 # Add a single legend using the long category names
 fig.legend(wedges, long_categories, loc='upper center', bbox_to_anchor=(0.5, 1.05), fontsize=12, ncol=3)

@@ -12,7 +12,11 @@ void mm_seed_mz_flt(void *km, mm128_v *mv, int32_t q_occ_max, float q_occ_frac)
 	a = Kmalloc(km, mm128_t, mv->n);
 	for (i = 0; i < mv->n; ++i)
 		a[i].x = mv->a[i].x, a[i].y = i;
-	parallel_sort(a, mv->n, max_thds);
+	#ifdef MM2_FAST
+		radix_sort_128x(a, a + mv->n);
+	#else
+		parallel_sort(a, mv->n, max_thds);
+	#endif
 	for (st = 0, i = 1; i <= mv->n; ++i) {
 		if (i == mv->n || a[i].x != a[st].x) {
 			int32_t cnt = i - st;

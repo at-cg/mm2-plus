@@ -12,6 +12,12 @@ ifeq ($(profile),1)
 	CPPFLAGS+=-DPROFILE
 endif
 
+ifeq ($(mm2_fast),1)
+	CPPFLAGS+=-DMM2_FAST
+	avx=1
+	par_dp_chain=1
+endif
+
 ifeq ($(par_dp_chain),1)
 	CPPFLAGS+=-DPAR_DP_CHAIN
 endif

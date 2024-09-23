@@ -31,50 +31,50 @@ fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 4), sharey=False)
 # Use a colormap for consistent colors
 colors = sns.color_palette("tab10", len(categories))
 
-# Plot bars for maize data
-bottom_maize = np.zeros(len(runtime_maize))
-for i, category in enumerate(categories):
-    ax1.bar(range(len(runtime_maize)), data_maize[:, i], bottom=bottom_maize, label=category, color=colors[i], zorder=3)
-    bottom_maize += data_maize[:, i]
-
-# Add runtime labels for maize (in hours)
-for i, v in enumerate(runtime_maize):
-    ax1.text(i - 0.25, bottom_maize[i] + 500, f'{v/3600:.2f}h', color='black', fontweight='bold', fontsize=15)
-
-# Plot bars for barley data
+# Plot bars for barley data (swap this to ax1)
 bottom_barley = np.zeros(len(runtime_barley))
 for i, category in enumerate(categories):
-    ax2.bar(range(len(runtime_barley)), data_barley[:, i], bottom=bottom_barley, color=colors[i], zorder=3)
+    ax1.bar(range(len(runtime_barley)), data_barley[:, i], bottom=bottom_barley, label=category, color=colors[i], zorder=3)
     bottom_barley += data_barley[:, i]
 
 # Add runtime labels for barley (in hours)
 for i, v in enumerate(runtime_barley):
-    ax2.text(i - 0.25, bottom_barley[i] + 1000, f'{v/3600:.2f}h', color='black', fontweight='bold', fontsize=15)
+    ax1.text(i - 0.25, bottom_barley[i] + 1000, f'{v/3600:.2f}h', color='black', fontweight='bold', fontsize=15)
 
-# Set titles for both subplots
-ax1.set_title('(A) Maize-Maize', fontsize=18)
-ax2.set_title('(B) Barley-Barley', fontsize=18)
+# Plot bars for maize data (swap this to ax2)
+bottom_maize = np.zeros(len(runtime_maize))
+for i, category in enumerate(categories):
+    ax2.bar(range(len(runtime_maize)), data_maize[:, i], bottom=bottom_maize, color=colors[i], zorder=3)
+    bottom_maize += data_maize[:, i]
+
+# Add runtime labels for maize (in hours)
+for i, v in enumerate(runtime_maize):
+    ax2.text(i - 0.25, bottom_maize[i] + 500, f'{v/3600:.2f}h', color='black', fontweight='bold', fontsize=15)
+
+# Set titles for both subplots (swap titles)
+ax1.set_title('(A) Barley-Barley', fontsize=18)  # Swapped to ax1
+ax2.set_title('(B) Maize-Maize', fontsize=18)    # Swapped to ax2
 
 # Set y-axis labels
 ax1.set_ylabel('Runtime (hours)', fontsize=18)
 ax2.set_ylabel('  ', fontsize=18)
 
-# Set x-tick labels for maize and barley
-ax1.set_xticks(range(len(runtime_maize)))
+# Set x-tick labels for barley and maize (swap labels)
+ax1.set_xticks(range(len(runtime_barley)))
 ax1.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$', '$+O_5$'], rotation=0, fontsize=16)
 
-ax2.set_xticks(range(len(runtime_barley)))
+ax2.set_xticks(range(len(runtime_maize)))
 ax2.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$', '$+O_5$'], rotation=0, fontsize=16)
 
 # Adjust y-limits to be non-normalized
-ax1.set_ylim(0, max(bottom_maize) + 3000)
-ax2.set_ylim(0, max(bottom_barley) + 5000)
+ax1.set_ylim(0, max(bottom_barley) + 5000)
+ax2.set_ylim(0, max(bottom_maize) + 3000)
 
 # Add yticks as runtime in hours
-ax1.set_yticks(range(0, int(max(bottom_maize) + 1000), 5000))
-ax1.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_maize) + 1000), 5000)], fontsize=16)
-ax2.set_yticks(range(0, int(max(bottom_barley) + 1000), 10000))
-ax2.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_barley) + 1000), 10000)], fontsize=16)
+ax1.set_yticks(range(0, int(max(bottom_barley) + 1000), 10000))
+ax1.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_barley) + 1000), 10000)], fontsize=16)
+ax2.set_yticks(range(0, int(max(bottom_maize) + 1000), 5000))
+ax2.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_maize) + 1000), 5000)], fontsize=16)
 
 # Grid lines for y-axis
 ax1.grid(axis='y', linestyle='--', zorder=0)
