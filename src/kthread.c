@@ -93,7 +93,7 @@ static void *ktf_worker(void *data)
 				free(tid); free(t.w);
 			}else // read map
 			{
-				#pragma omp parallel for num_threads(n_threads) schedule(dynamic)  // Use static scheduling for uniform workloads
+				#pragma omp parallel for num_threads(n_threads) schedule(dynamic)  // Use dynamic scheduling for uniform workloads
 				for (long j = 0; j < n; ++j) {
 					int32_t tid = omp_get_thread_num();  // Capture the thread ID
 					func(data, j, tid);

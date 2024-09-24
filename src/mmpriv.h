@@ -38,16 +38,6 @@
 #define MALLOC(type, len) ((type*)malloc((len) * sizeof(type)))
 #define CALLOC(type, len) ((type*)calloc((len), sizeof(type)))
 
-#pragma once
-#ifdef __cplusplus
-extern "C" {
-#endif
-void parallel_sort(mm128_t* z, size_t n_u, int32_t n_thds);
-
-#ifdef __cplusplus
-}
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -137,6 +127,9 @@ static inline float mg_log2(float x) // NB: this doesn't work when x<2
 	log_2 += (-0.34484843f * z.f + 2.02466578f) * z.f - 0.67487759f;
 	return log_2;
 }
+
+// parallel sort
+void parallel_sort(mm128_t* z, size_t n_u, int32_t n_thds);
 
 #ifdef __cplusplus
 }

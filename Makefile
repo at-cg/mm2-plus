@@ -139,7 +139,7 @@ src/lchain.o:src/lchain.c src/parallel_chaining_v2_22.h
 		$(CXX) -c -fopenmp $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
 
 src/parallel_sort.o:src/parallel_sort.cpp
-		$(CXX) -c -fopenmp $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
+		$(CXX) -c -fopenmp -D_GLIBCXX_PARALLEL $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
 
 src/hit.o:src/hit.c
 		$(CXX) -c -fopenmp $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@

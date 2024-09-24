@@ -163,22 +163,21 @@ uint64_t *mg_chain_backtrack_par(void *km, int64_t n, int32_t *f, int64_t *p, in
 	std::vector<int64_t> st_vec(num_chr, 0);
 	std::vector<int64_t> end_vec(num_chr, 0);
 	int32_t chrom_id = 0;
-	int32_t chrom_id_old = 0;
-	st_vec[chrom_id] = 0;
-	for (i = 1; i < n; i++)
-	{
-		if (chrom_id_old != chrom_id)
+	if (n > 0) {
+		st_vec[0] = 0; // Initialize the start of the first chromosome
+		for (i = 1; i < n; i++)
 		{
-			end_vec[chrom_id_old] = i - 2;
-			if (chrom_id == num_chr - 1) end_vec[chrom_id] = n - 1;
-			st_vec[chrom_id] = i - 1;
-			chrom_id_old = chrom_id;
+			if (a[i-1].x >> 32 != a[i].x >> 32) // Check for a new chromosome
+			{
+				end_vec[chrom_id] = i - 1; // Set end for the current chromosome
+				chrom_id++; // Move to the next chromosome
+				st_vec[chrom_id] = i; // Start index for the new chromosome
+			}
 		}
-		if (a[i-1].x>>32 != a[i].x>>32)
-		{
-			chrom_id++;
-		}
+		end_vec[chrom_id] = n - 1; // Set end for the last chromosome
 	}
+
+	// Handle the case where num_chr is 1
 	if (num_chr == 1) {st_vec[0] = 0; end_vec[0] = n - 1;}
 
 	int32_t n_u_global = 0;
@@ -195,7 +194,7 @@ uint64_t *mg_chain_backtrack_par(void *km, int64_t n, int32_t *f, int64_t *p, in
 		#endif
 	}
 	
-	#pragma omp parallel for num_threads(num_threads_b2b) shared(p_t_vec) schedule(dynamic, 1) // No need reduction of n_u_global and n_v_global
+	#pragma omp parallel for num_threads(num_threads_b2b) reduction(+:n_u_global, n_v_global) schedule(dynamic, 1)
 	for (int32_t thd = 0; thd < num_chr; thd++)
 	{
 		int64_t n_z = 0;
@@ -268,10 +267,8 @@ uint64_t *mg_chain_backtrack_par(void *km, int64_t n, int32_t *f, int64_t *p, in
 		// push u_vec to u and v_vec to v
 		#pragma omp critical // maintains thd order
 		{
-			v_vec_global.reserve(v_vec_global.size() + v_vec.size());
-			u_vec_global.reserve(u_vec_global.size() + u_vec.size());
-			std::copy(v_vec.begin(), v_vec.end(), std::back_inserter(v_vec_global)); v_vec.clear(); // clear the vectors
-			std::copy(u_vec.begin(), u_vec.end(), std::back_inserter(u_vec_global)); u_vec.clear();
+			v_vec_global.insert(v_vec_global.end(), v_vec.begin(), v_vec.end()); v_vec.clear();
+			u_vec_global.insert(u_vec_global.end(), u_vec.begin(), u_vec.end()); u_vec.clear();
 		}
 	}
 
@@ -303,35 +300,28 @@ static mm128_t *compact_a(void *km, int32_t n_u, uint64_t *u, int32_t n_v, int32
 	uint64_t *u2;
 	int64_t i, j, k;
 
-	// write the result to b[]
+	// write the results to b[]
 	if (is_g2g_aln)
 	{
-		#if defined(PAR_CHAIN_1) || defined(PAR_CHAIN_2) || defined(PAR_BTK)
-			b = Kmalloc(km, mm128_t, n_v);
-			#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
-				const int64_t PREF_DIST = 64;
-			#endif
-			for (i = 0, k = 0; i < n_u; ++i) {
-				int32_t k0 = k, ni = (int32_t)u[i];
-				for (j = 0; j < ni; ++j)
-				{
-					int64_t idx = k0 + (ni - j - 1);
-					#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
-						int64_t PREF_idx = idx - PREF_DIST;
-						if (PREF_idx >= 0 && PREF_idx >= (k0 + ni - 1)) _mm_prefetch(reinterpret_cast<const char*>(&a[v[idx - PREF_DIST]]), _MM_HINT_T0); // Asynchronous prefetching
-					#endif
-					b[k++] = a[v[idx]];
-				}
+		b = Kmalloc(km, mm128_t, n_v);
+		#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+			const int64_t PREF_DIST = 64;
+		#endif
+		for (i = 0, k = 0; i < n_u; ++i) {
+			int32_t k0 = k, ni = (int32_t)u[i];
+			for (j = 0; j < ni; ++j)
+			{
+				int64_t idx = k0 + (ni - j - 1);
+				#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+					int64_t PREF_idx = idx - PREF_DIST;
+					if (PREF_idx >= 0 && PREF_idx >= (k0 + ni - 1)) _mm_prefetch(reinterpret_cast<const char*>(&a[v[idx - PREF_DIST]]), _MM_HINT_T0); // Asynchronous prefetching
+				#endif
+				b[k++] = a[v[idx]];
 			}
+		}
+		#if defined(PAR_CHAIN_1) || defined(PAR_CHAIN_2)
 			free(v);
 		#else
-			// write the result to b[]
-			b = Kmalloc(km, mm128_t, n_v);
-			for (i = 0, k = 0; i < n_u; ++i) {
-				int32_t k0 = k, ni = (int32_t)u[i];
-				for (j = 0; j < ni; ++j)
-					b[k++] = a[v[k0 + (ni - j - 1)]];
-			}
 			kfree(km, v);
 		#endif
 	}else
@@ -787,23 +777,22 @@ mm128_t *mg_lchain_rmq_opt(int max_dist, int max_dist_inner, int bw, int max_chn
 		memset(st_vec, 0, num_chr * sizeof(int64_t));
 		memset(end_vec, 0, num_chr * sizeof(int64_t));
         int32_t chrom_id = 0;
-        int32_t chrom_id_old = 0;
-        st_vec[chrom_id] = 0;
-        for (i = 1; i < n; i++)
-        {
-            if (chrom_id_old != chrom_id)
-            {
-                end_vec[chrom_id_old] = i - 2;
-                if (chrom_id == num_chr - 1) end_vec[chrom_id] = n - 1;
-                st_vec[chrom_id] = i - 1;
-                chrom_id_old = chrom_id;
-            }
-            if (a[i-1].x>>32 != a[i].x>>32)
-            {
-                chrom_id++;
-            }
-        }
-        if (num_chr == 1) {st_vec[0] = 0; end_vec[0] = n - 1;}
+        if (n > 0) {
+			st_vec[0] = 0; // Initialize the start of the first chromosome
+			for (i = 1; i < n; i++)
+			{
+				if (a[i-1].x >> 32 != a[i].x >> 32) // Check for a new chromosome
+				{
+					end_vec[chrom_id] = i - 1; // Set end for the current chromosome
+					chrom_id++; // Move to the next chromosome
+					st_vec[chrom_id] = i; // Start index for the new chromosome
+				}
+			}
+			end_vec[chrom_id] = n - 1; // Set end for the last chromosome
+		}
+
+		// Handle the case where num_chr is 1
+		if (num_chr == 1) {st_vec[0] = 0; end_vec[0] = n - 1;}
 
 		#ifdef GET_DIST
 			int64_t max_anchor_chrom = -1;
