@@ -16,13 +16,13 @@ value_mm2_hap_chain_btk_sort_human = np.array([0.112, 0.274 + 0.268, 0.032 + 0.0
 data_human = np.array([value_mm2_human, value_mm2_avx_human, value_mm2_avx_olp_human, value_mm2_hap_chain_human, value_mm2_hap_chain_btk_human, value_mm2_hap_chain_btk_sort_human])
 
 # Data for the second part (primates) with the updated categories
-runtime_primates = [2040.404, 1752.056, 1715.094, 1167.523, 1152.008, 1116.460]  # Runtime in hours for primates
-value_mm2_primates = np.array([0.078, 0.256 + 0.123, 0.020 + 0.017, 0.012, 0.490, 0.005]) * runtime_primates[0]
-value_mm2_avx_primates = np.array([0.084, 0.295 + 0.146, 0.022 + 0.019, 0.017, 0.412, 0.005]) * runtime_primates[1]
-value_mm2_olp_primates = np.array([0.118, 0.305 + 0.148, 0.023 + 0.022, 0.000, 0.377, 0.007]) * runtime_primates[2]
-value_mm2_hap_chain_primates = np.array([0.123, 0.114 + 0.092, 0.042 + 0.039, 0.001, 0.579, 0.010]) * runtime_primates[3]
-value_mm2_hap_chain_btk_primates = np.array([0.127, 0.124 + 0.097, 0.016 + 0.012, 0.001, 0.613, 0.011]) * runtime_primates[4]
-value_mm2_hap_chain_btk_sort_primates = np.array([0.106, 0.114 + 0.097, 0.019 + 0.015, 0.001, 0.646, 0.003]) * runtime_primates[5]
+runtime_primates = [2146.975, 1911.632, 1668.894, 1229.227, 1174.610, 1174.683]  # Runtime in hours for primates
+value_mm2_primates = np.array([0.079, 0.249 + 0.106, 0.016 + 0.012, 0.012, 0.518, 0.004]) * runtime_primates[0]
+value_mm2_avx_primates = np.array([0.087, 0.278 + 0.124, 0.020 + 0.018, 0.016, 0.453, 0.005]) * runtime_primates[1]
+value_mm2_olp_primates = np.array([0.092, 0.313 + 0.133, 0.022 + 0.019, 0.000, 0.414, 0.007]) * runtime_primates[2]
+value_mm2_hap_chain_primates = np.array([0.131, 0.095 + 0.080, 0.034 + 0.032, 0.001, 0.617, 0.010]) * runtime_primates[3]
+value_mm2_hap_chain_btk_primates = np.array([0.140, 0.104 + 0.084, 0.014 + 0.011, 0.001, 0.635, 0.011]) * runtime_primates[4]
+value_mm2_hap_chain_btk_sort_primates = np.array([0.111, 0.096 + 0.080, 0.017 + 0.014, 0.001, 0.677, 0.004]) * runtime_primates[5]
 data_primates = np.array([value_mm2_primates, value_mm2_avx_primates, value_mm2_olp_primates, value_mm2_hap_chain_primates, value_mm2_hap_chain_btk_primates, value_mm2_hap_chain_btk_sort_primates])
 
 # Create subplots

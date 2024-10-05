@@ -16,13 +16,13 @@ value_mm2_hap_chain_btk_sort_human = np.array([0.101, 0.247 + 0.320, 0.032 + 0.0
 data_human = np.array([value_mm2_human, value_mm2_avx_human, value_mm2_olp_human, value_mm2_hap_chain_human, value_mm2_hap_chain_btk_human, value_mm2_hap_chain_btk_sort_human])
 
 # Data for Primates with updated categories
-runtime_primates = [2040.404, 1752.056, 1715.094, 1458.902, 1320.493, 1255.645]  # in seconds
-value_mm2_primates = np.array([0.078, 0.256 + 0.123, 0.020 + 0.017, 0.012, 0.490, 0.005]) * runtime_primates[0]
-value_mm2_avx_primates = np.array([0.084, 0.295 + 0.146, 0.022 + 0.019, 0.017, 0.412, 0.005]) * runtime_primates[1]
-value_mm2_olp_primates = np.array([0.118, 0.305 + 0.148, 0.023 + 0.022, 0.000, 0.377, 0.007]) * runtime_primates[2]
-value_mm2_hap_chain_primates = np.array([0.133, 0.175 + 0.143, 0.032 + 0.028, 0.000, 0.481, 0.008]) * runtime_primates[3]
-value_mm2_hap_chain_btk_primates = np.array([0.106, 0.191 + 0.154, 0.012 + 0.010, 0.000, 0.518, 0.009]) * runtime_primates[4]
-value_mm2_hap_chain_btk_sort_primates = np.array([0.089, 0.179 + 0.154, 0.015 + 0.012, 0.001, 0.547, 0.002]) * runtime_primates[5]
+runtime_primates = [2146.975, 1911.632, 1668.894, 1546.090, 1451.113, 1386.812]  # in seconds
+value_mm2_primates = np.array([0.079, 0.249 + 0.106, 0.016 + 0.012, 0.012, 0.518, 0.004]) * runtime_primates[0]
+value_mm2_avx_primates = np.array([0.087, 0.278 + 0.124, 0.020 + 0.018, 0.016, 0.453, 0.005]) * runtime_primates[1]
+value_mm2_olp_primates = np.array([0.092, 0.313 + 0.133, 0.022 + 0.019, 0.000, 0.414, 0.007]) * runtime_primates[2]
+value_mm2_hap_chain_primates = np.array([0.118, 0.164 + 0.138, 0.035 + 0.028, 0.001, 0.509, 0.008]) * runtime_primates[3]
+value_mm2_hap_chain_btk_primates = np.array([0.129, 0.178 + 0.146, 0.015 + 0.011, 0.001, 0.513, 0.008]) * runtime_primates[4]
+value_mm2_hap_chain_btk_sort_primates = np.array([0.107, 0.174 + 0.144, 0.019 + 0.013, 0.001, 0.540, 0.004]) * runtime_primates[5]
 data_primates = np.array([value_mm2_primates, value_mm2_avx_primates, value_mm2_olp_primates, value_mm2_hap_chain_primates, value_mm2_hap_chain_btk_primates, value_mm2_hap_chain_btk_sort_primates])
 
 # Create subplots
