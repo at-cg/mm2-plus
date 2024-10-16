@@ -6,13 +6,13 @@ import seaborn as sns
 categories = ['Computing anchors', 'Chaining (DP recursion)', 'Chaining (DP traceback)', 'Filtering primary chains', 'Base-to-base alignment', 'Miscellaneous']
 
 # Data for maize with updated categories
-runtime_maize = [15182.391, 14358.611, 11304.108, 4452.148, 2648.973, 2280.432]  # in seconds
-value_mm2_maize = np.array([0.025, 0.263 + 0.236, 0.057 + 0.057, 0.289, 0.055, 0.017]) * runtime_maize[0]
-value_mm2_avx_maize = np.array([0.026, 0.280 + 0.250, 0.056 + 0.053, 0.284, 0.035, 0.016]) * runtime_maize[1]
-value_mm2_olp_maize = np.array([0.046, 0.378 + 0.337, 0.088 + 0.083, 0.002, 0.047, 0.019]) * runtime_maize[2]
-value_mm2_hap_chain_maize = np.array([0.118, 0.091 + 0.086, 0.266 + 0.256, 0.006, 0.127, 0.050]) * runtime_maize[3]
-value_mm2_hap_chain_btk_maize = np.array([0.205, 0.170 + 0.159, 0.078 + 0.069, 0.011, 0.221, 0.088]) * runtime_maize[4]
-value_mm2_hap_chain_btk_sort_maize = np.array([0.096, 0.193 + 0.196, 0.126 + 0.090, 0.014, 0.261, 0.023]) * runtime_maize[5]
+runtime_maize = [15111.068, 14755.744, 10495.920, 5301.497, 3675.419, 3380.453]  # in seconds
+value_mm2_maize = np.array([0.024, 0.246 + 0.222, 0.052 + 0.052, 0.333, 0.053, 0.017]) * runtime_maize[0]
+value_mm2_avx_maize = np.array([0.025, 0.252 + 0.224, 0.055 + 0.055, 0.339, 0.032, 0.017]) * runtime_maize[1]
+value_mm2_olp_maize = np.array([0.046, 0.386 + 0.335, 0.085 + 0.081, 0.0024, 0.046, 0.018]) * runtime_maize[2]
+value_mm2_hap_chain_maize = np.array([0.127, 0.095 + 0.090, 0.254 + 0.252, 0.006, 0.123, 0.054]) * runtime_maize[3]
+value_mm2_hap_chain_btk_maize = np.array([0.233, 0.179 + 0.169, 0.042 + 0.040, 0.012, 0.228, 0.096]) * runtime_maize[4]
+value_mm2_hap_chain_btk_sort_maize = np.array([0.117, 0.219 + 0.206, 0.067 + 0.059, 0.014, 0.284, 0.033]) * runtime_maize[5]
 data_maize = np.array([value_mm2_maize, value_mm2_avx_maize, value_mm2_olp_maize, value_mm2_hap_chain_maize, value_mm2_hap_chain_btk_maize, value_mm2_hap_chain_btk_sort_maize])
 
 # Data for barley with updated categories

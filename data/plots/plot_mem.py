@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 datasets = ['Barley-Barley', 'Maize-Maize', 'Human-Human', 'Human-Bonobo']
 methods = ['minimap2', 'mm2-plus']
 memory_usage = [
-    [220.768, 199.506],  # Barley-Barley
-    [265.743, 196.085],  # Maize-Maize
+    [220.768, 199.537],  # Barley-Barley
+    [269.599, 194.311],  # Maize-Maize
     [29.969, 32.169],    # Human-Human
     [38.486, 41.663]     # Human-Bonobo
 ]

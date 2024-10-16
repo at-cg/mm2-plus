@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 datasets = ['Barley-Barley', 'Maize-Maize', 'Human-Human', 'Human-Bonobo']
 methods = ['Inter-chromosomal', 'Intra-chromosomal']
 runtimes = [
-    [6063.077, 6110.632],  # Barley-Barley
-    [2280.432, 2857.830],  # Maize-Maize
+    [5841.102, 6110.632],  # Barley-Barley
+    [3380.453, 4006.088],  # Maize-Maize
     [727.938, 790.252],    # Human-Human
     [1174.683, 1386.812]   # Human-Bonobo
 ]
