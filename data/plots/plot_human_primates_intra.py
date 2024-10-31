@@ -3,7 +3,7 @@ import numpy as np
 import seaborn as sns
 
 # Updated categories based on the mapping
-categories = ['Computing anchors', 'Chaining (DP recursion)', 'Chaining (DP traceback)', 'Filtering primary chains', 'Base-to-base alignment', 'Miscellaneous']
+categories = ['(1) Computing anchors', '(2) Chaining (DP recursion)', '(3) Chaining (DP traceback)', '(4) Marking primary chains', '(5) Base-to-base alignment', '(6) Miscellaneous']
 
 # Data for Human with updated categories
 runtime_human = [1237.404, 1135.931, 1032.298, 941.719, 849.041, 790.252]  # in seconds
@@ -61,10 +61,10 @@ ax2.set_ylabel('  ', fontsize=18)
 
 # Set x-tick labels for human and primates
 ax1.set_xticks(range(len(runtime_human)))
-ax1.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$', '$+O_5$'], rotation=0, fontsize=16)
+ax1.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$', '$+O_5$'], rotation=0, fontsize=17)
 
 ax2.set_xticks(range(len(runtime_primates)))
-ax2.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$', '$+O_5$'], rotation=0, fontsize=16)
+ax2.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$', '$+O_5$'], rotation=0, fontsize=17)
 
 # Adjust y-limits to be non-normalized
 ax1.set_ylim(0, max(bottom_human) + 200)
@@ -72,9 +72,9 @@ ax2.set_ylim(0, max(bottom_primates) + 200)
 
 # Add yticks as runtime in hours
 ax1.set_yticks(range(0, int(max(bottom_human) + 100), 500))
-ax1.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_human) + 100), 500)], fontsize=16)
+ax1.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_human) + 100), 500)], fontsize=17)
 ax2.set_yticks(range(0, int(max(bottom_primates) + 100), 500))
-ax2.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_primates) + 100), 500)], fontsize=16)
+ax2.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_primates) + 100), 500)], fontsize=17)
 
 # Grid lines for y-axis
 ax1.grid(axis='y', linestyle='--', zorder=0)

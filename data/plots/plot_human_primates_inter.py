@@ -3,7 +3,7 @@ import numpy as np
 import seaborn as sns
 
 # Data for the first part (human) with the updated categories
-categories = ['Computing anchors', 'Chaining (DP recursion)', 'Chaining (DP traceback)', 'Filtering primary chains', 'Base-to-base alignment', 'Miscellaneous']
+categories = ['(1) Computing anchors', '(2) Chaining (DP recursion)', '(3) Chaining (DP traceback)', '(4) Marking primary chains', '(5) Base-to-base alignment', '(6) Miscellaneous']
 runtime_human = [1237.404, 1135.931, 1032.298, 801.616, 783.492, 727.938]  # Runtime in hours for human
 
 # Apply the mapping to shorten the values
@@ -52,8 +52,8 @@ for i, v in enumerate(runtime_primates):
     ax2.text(i - 0.25, bottom_primates[i] + 50, f'{v/3600:.2f}h', color='black', fontweight='bold', fontsize=15)
 
 # Set titles for both subplots
-ax1.set_title('(C) Human-Human', fontsize=18)
-ax2.set_title('(D) Human-Bonobo', fontsize=18)
+ax1.set_title('(C) Human-Human', fontsize=19)
+ax2.set_title('(D) Human-Bonobo', fontsize=19)
 
 # Set y-axis labels
 ax1.set_ylabel('Runtime (hours)', fontsize=18)
@@ -61,10 +61,10 @@ ax2.set_ylabel('  ', fontsize=18)
 
 # Set x-tick labels for human and primates
 ax1.set_xticks(range(len(runtime_human)))
-ax1.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$', '$+O_5$'], rotation=0, fontsize=15)
+ax1.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$', '$+O_5$'], rotation=0, fontsize=17)
 
 ax2.set_xticks(range(len(runtime_primates)))
-ax2.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$', '$+O_5$'], rotation=0, fontsize=15)
+ax2.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$', '$+O_5$'], rotation=0, fontsize=17)
 
 # Adjust y-limits to be non-normalized
 ax1.set_ylim(0, max(bottom_human) + 200)
@@ -72,9 +72,9 @@ ax2.set_ylim(0, max(bottom_primates) + 200)
 
 # add yticks as [runtime[0], runtime[1], runtime[2], ...]/3600
 ax1.set_yticks(range(0, int(max(bottom_human) + 100), 500))
-ax1.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_human) + 100), 500)], fontsize=15)
+ax1.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_human) + 100), 500)], fontsize=17)
 ax2.set_yticks(range(0, int(max(bottom_primates) + 100), 500))
-ax2.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_primates) + 100), 500)], fontsize=15)
+ax2.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_primates) + 100), 500)], fontsize=17)
 
 ax1.grid(axis='y', linestyle='--', zorder=0)
 ax2.grid(axis='y', linestyle='--', zorder=0)

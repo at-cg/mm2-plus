@@ -52,21 +52,23 @@ datasets = [
 for i, (title, mm2_hours, mm2_plus_hours) in enumerate(datasets):
     axes[i].plot(threads, mm2_hours, marker='o', label='minimap2', color='tab:blue')
     axes[i].plot(threads, mm2_plus_hours, marker='o', label='mm2-plus', color='tab:orange')
-    axes[i].set_title(f'({chr(65+i)}) {title}', fontsize=12)
-    axes[i].set_xlabel('Threads', fontsize=12)
+    axes[i].set_title(f'({chr(65+i)}) {title}', fontsize=14)
+    axes[i].set_xlabel('Threads', fontsize=13)
     axes[i].set_xticks(threads)
-    axes[i].set_xticklabels(xticks)
+    axes[i].set_xticklabels(xticks, fontsize=12)
     axes[i].set_ylim(bottom=0)  # Ensure Y-axis starts at 0
     axes[i].grid(linestyle='--', linewidth=0.5)
+    # set yticks font size to 12
+    axes[i].tick_params(axis='y', labelsize=12)
     
     # Set 4 evenly spaced Y-axis ticks and format them to 2 decimal places
     set_yticks_count(axes[i], num_ticks=5)
     
     if i == 0:
-        axes[i].set_ylabel('Runtime (hours)', fontsize=12)
+        axes[i].set_ylabel('Runtime (hours)', fontsize=13)
 
 # Add a single legend at the top of the figure
-fig.legend(['minimap2', 'mm2-plus'], loc='upper center', ncol=2, bbox_to_anchor=(0.5, 1.04))
+fig.legend(['minimap2', 'mm2-plus'], loc='upper center', ncol=2, bbox_to_anchor=(0.5, 1.08), fontsize=13)
 
 plt.tight_layout(rect=[0, 0, 1, 0.95], w_pad=3)
 plt.savefig("strong_scaling.pdf", format="pdf", dpi=1200, bbox_inches='tight')

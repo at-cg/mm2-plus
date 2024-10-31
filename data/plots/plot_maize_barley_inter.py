@@ -3,7 +3,7 @@ import numpy as np
 import seaborn as sns
 
 # Updated categories based on the mapping
-categories = ['Computing anchors', 'Chaining (DP recursion)', 'Chaining (DP traceback)', 'Filtering primary chains', 'Base-to-base alignment', 'Miscellaneous']
+categories = ['(1) Computing anchors', '(2) Chaining (DP recursion)', '(3) Chaining (DP traceback)', '(4) Marking primary chains', '(5) Base-to-base alignment', '(6) Miscellaneous']
 
 # Data for maize with updated categories
 runtime_maize = [15111.068, 14755.744, 10495.920, 5301.497, 3675.419, 3380.453]  # in seconds
@@ -52,8 +52,8 @@ for i, v in enumerate(runtime_maize):
     ax2.text(i - 0.25, bottom_maize[i] + 500, f'{v/3600:.2f}h', color='black', fontweight='bold', fontsize=15)
 
 # Set titles for both subplots (swap titles)
-ax1.set_title('(A) Barley-Barley', fontsize=18)  # Swapped to ax1
-ax2.set_title('(B) Maize-Maize', fontsize=18)    # Swapped to ax2
+ax1.set_title('(A) Barley-Barley', fontsize=19)  # Swapped to ax1
+ax2.set_title('(B) Maize-Maize', fontsize=19)    # Swapped to ax2
 
 # Set y-axis labels
 ax1.set_ylabel('Runtime (hours)', fontsize=18)
@@ -61,10 +61,10 @@ ax2.set_ylabel('  ', fontsize=18)
 
 # Set x-tick labels for barley and maize (swap labels)
 ax1.set_xticks(range(len(runtime_barley)))
-ax1.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$', '$+O_5$'], rotation=0, fontsize=16)
+ax1.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$', '$+O_5$'], rotation=0, fontsize=17)
 
 ax2.set_xticks(range(len(runtime_maize)))
-ax2.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$', '$+O_5$'], rotation=0, fontsize=16)
+ax2.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$', '$+O_5$'], rotation=0, fontsize=17)
 
 # Adjust y-limits to be non-normalized
 ax1.set_ylim(0, max(bottom_barley) + 5000)
@@ -72,9 +72,9 @@ ax2.set_ylim(0, max(bottom_maize) + 3000)
 
 # Add yticks as runtime in hours
 ax1.set_yticks(range(0, int(max(bottom_barley) + 1000), 10000))
-ax1.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_barley) + 1000), 10000)], fontsize=16)
+ax1.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_barley) + 1000), 10000)], fontsize=17)
 ax2.set_yticks(range(0, int(max(bottom_maize) + 1000), 5000))
-ax2.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_maize) + 1000), 5000)], fontsize=16)
+ax2.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_maize) + 1000), 5000)], fontsize=17)
 
 # Grid lines for y-axis
 ax1.grid(axis='y', linestyle='--', zorder=0)
@@ -85,7 +85,7 @@ ax1.set_xlabel('Optimizations', fontsize=18)
 ax2.set_xlabel('Optimizations', fontsize=18)
 
 # Adding a shared legend at the top
-fig.legend(categories, loc='upper center', bbox_to_anchor=(0.5, 1.20), fontsize=16, ncol=3)
+fig.legend(categories, loc='upper center', bbox_to_anchor=(0.5, 1.22), fontsize=17, ncol=3)
 
 plt.tight_layout()
 plt.savefig('combined_maize_barley_rt1.pdf', bbox_inches='tight', format='pdf', dpi=1200)

@@ -19,7 +19,7 @@ tab10_colors = sns.color_palette("tab10", len(human))
 
 # Long category names for the legend
 long_categories = [
-    'Computing anchors', 'Chaining (DP recursion)', 'Chaining (DP traceback)', 'Filtering primary chains', 'Base-to-base alignment', 'Miscellaneous'
+    '(1) Computing anchors', '(2) Chaining (DP recursion)', '(3) Chaining (DP traceback)', '(4) Marking primary chains', '(5) Base-to-base alignment', '(6) Miscellaneous'
 ]
 
 # Reordered total runtimes for each dataset
@@ -40,7 +40,7 @@ for i, ax in enumerate(axes):
     wedges, texts, autotexts = ax.pie(data[i], labels=None, autopct=autopct_func, 
                                       colors=tab10_colors, startangle=90, textprops=dict(color="w"),
                                       pctdistance=0.65)  # Shift value annotations outward
-    ax.set_title(titles[i], fontsize=14)
+    ax.set_title(titles[i], fontsize=16)
 
     # Move value annotations outside the pie slices
     for autotext in autotexts:
@@ -54,7 +54,7 @@ for i, ax in enumerate(axes):
     ax.text(0, -1.5, f'CPU efficiency: {cpu_usages[i]:.2f}%', ha='center', fontsize=14)
 
 # Add a single legend using the long category names
-fig.legend(wedges, long_categories, loc='upper center', bbox_to_anchor=(0.5, 1.05), fontsize=12, ncol=3)
+fig.legend(wedges, long_categories, loc='upper center', bbox_to_anchor=(0.5, 1.07), fontsize=13, ncol=3)
 
 # Adjust the layout to make space for the legend and runtimes
 plt.subplots_adjust(top=0.85, bottom=0.2)
