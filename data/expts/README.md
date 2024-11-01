@@ -40,6 +40,7 @@ cd barley && ./get_fa.sh && cd ..
 # Create directory and get tools
 mkdir -p Long-reads && cd Long-reads
 git clone https://github.com/at-cg/mm2-plus.git
+cd mm2-plus && git checkout dacaad1 && cd .. # checkout the old commit
 git clone https://github.com/lh3/minimap2
 cp -r mm2-plus mm2-fast
 cd mm2-plus && make all=1 && cd ..
