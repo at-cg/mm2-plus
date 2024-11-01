@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
-git clone https://github.com/gsc74/minimap2_base.git
-git clone https://github.com/gsc74/mm2-plus.git
+# git clone https://github.com/gsc74/minimap2_base.git
+# git clone https://github.com/gsc74/mm2-plus.git
 
 set -e  # Exit immediately if a command exits with a non-zero status
 set -o pipefail  # Consider errors in a pipeline
