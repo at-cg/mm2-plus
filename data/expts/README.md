@@ -121,3 +121,49 @@ minimap2/minimap2 -t48 -x ava-ont SRR24678051.fastq SRR24678051.fastq > mm2_ONT_
 mm2-fast/minimap2 -t48 -x ava-ont SRR24678051.fastq SRR24678051.fastq > mm2-fast_ONT_ava.paf
 mm2-plus/minimap2 -t48 -x ava-ont SRR24678051.fastq SRR24678051.fastq > mm2-plus_ONT_ava.paf
 ```
+
+### 4. Compute the F1-score
+```bash
+# (A) Human-Human
+cd human
+./get_vcf.sh
+./eval_vcf.sh
+
+# (A) Human-Bonobo
+cd primates
+./get_vcf.sh
+./eval_vcf.sh
+
+# (A) Maize-Maize
+cd maize
+./get_vcf.sh
+./eval_vcf.sh
+
+# (A) Barley-Barley
+cd barley
+./get_vcf.sh
+./eval_vcf.sh
+```
+
+### 4. Get the anchor distribution
+```bash
+# build mm2-plus to write anchor_dist.txt
+git clone https://github.com/at-cg/mm2-plus.git
+cd mm2-plus && git checkout dacaad1 && make get_dist=1 && cd .. # checkout the old commit
+
+# (A) Human-Human
+cd human
+mm2-plus/minimap2 -t48 -x asm5 GCF_009914755.1_T2T-CHM13v2.0_genomic.fna GCA_018852605.2_Q100_hg002v1.0.1.pat_genomic.fna -o hap_anchor_dist.paf
+
+# (A) Human-Bonobo
+cd primates
+mm2-plus/minimap2 -t48 -x asm20 GCF_009914755.1_T2T-CHM13v2.0_genomic.fna GCF_029289425.2_NHGRI_mPanPan1-v2.0_pri_genomic.fna -o hap_anchor_dist.paf
+
+# (A) Maize-Maize
+cd maize
+mm2-plus/minimap2 -t48 -x asm5 Zm-Mo17-REFERENCE-CAU-2.0.fa Zm-W22-REFERENCE-NRGENE-2.0.fa -o hap_anchor_dist.paf
+
+# (A) Barley-Barley
+cd barley
+mm2-plus/minimap2 -t48 -x asm5 Hordeum_vulgare.MorexV3_pseudomolecules_assembly.dna.toplevel.fa GCA_902500625.1_GPv1_genomic.fna -o hap_anchor_dist.paf
+```
