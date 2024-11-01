@@ -114,7 +114,7 @@ Both `diff` commands should return null output.
 We observed up to a 7.59x speedup for genome-to-genome alignment across all tested datasets, as detailed in our [paper](#citation). The speedup for long-read alignment is comparable to that achieved by [mm2-fast](https://github.com/bwa-mem2/mm2-fast). For a thorough evaluation and detailed experimentation, please refer to our [paper](#citation).
 
 ### <a name="citation"></a>Citation
-Accelerating Whole-Genome Alignment using Parallel Chaining Algorithm. Ghanshyam Chandra, Md Vasimuddin, Sanchit Misra and Chirag Jain. (bioRxiv 2024)
+- **Ghanshyam Chandra, Md Vasimuddin, Sanchit Misra and Chirag Jain**. "[Methods to Accelerate Whole-Genome Alignment](https://www.biorxiv.org)". *bioRxiv* 2024.
 
 ---
 <a name="readme_mm2"></a> The original README content of minimap2 follows.
