@@ -1,6 +1,5 @@
-# <div align="center">mm2-plus</div>
-
-## <div align="center">A versatile pairwise aligner for genomic sequences</div>
+[![GitHub Downloads](https://img.shields.io/github/downloads/at-cg/mm2-plus/total.svg?style=social&logo=github&label=Download)](https://github.com/at-cg/mm2-plus/releases)
+## mm2-fast
 
 ### Introduction
 
