@@ -6,9 +6,9 @@ import seaborn as sns
 datasets = ['D_Human', 'D_Primates', 'D_Barley']
 
 # Multiplying by 100 as specified
-human  = np.array([0.091, 0.52, 0.046, 0.048, 0.289, 0.007]) * 100
-primates = np.array([0.078, 0.379, 0.037, 0.012, 0.490, 0.005]) * 100
-barley = np.array([0.027, 0.433, 0.085, 0.354, 0.089, 0.012]) * 100
+human  = np.array([0.091, 0.52 + 0.046, 0.048, 0.289, 0.007]) * 100
+primates = np.array([0.078, 0.379 + 0.037, 0.012, 0.490, 0.005]) * 100
+barley = np.array([0.027, 0.433 + 0.085, 0.354, 0.089, 0.012]) * 100
 
 # Reorder the data, titles, runtimes, and CPU usages to match the desired output
 data = [barley, human, primates]
@@ -19,7 +19,7 @@ tab10_colors = sns.color_palette("tab10", len(human))
 
 # Long category names for the legend
 long_categories = [
-    '(1) Computing anchors', '(2) Chaining (DP recursion)', '(3) Chaining (DP traceback)', '(4) Marking primary chains', '(5) Base-to-base alignment', '(6) Miscellaneous'
+    '(1) Computing anchors', '(2) Chaining', '(3) Marking primary chains', '(4) Base-to-base alignment', '(5) Miscellaneous'
 ]
 
 # Reordered total runtimes for each dataset

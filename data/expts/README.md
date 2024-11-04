@@ -14,7 +14,7 @@ We provide scripts to reproduce the results. Please execute the following comman
 
 ```bash
 # Get the minimap2 v2.28 (with the profiling)
-gunzip minimap2_base.gz
+unzip minimap2_base.zip
 git clone https://github.com/at-cg/mm2-plus.git
 git clone https://github.com/lh3/minimap2
 # build the tools
