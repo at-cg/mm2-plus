@@ -1,5 +1,5 @@
 [![GitHub Downloads](https://img.shields.io/github/downloads/at-cg/mm2-plus/total.svg?style=social&logo=github&label=Download)](https://github.com/at-cg/mm2-plus/releases)
-## mm2-fast
+## mm2-plus
 
 ### Introduction
 
