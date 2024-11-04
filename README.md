@@ -1,14 +1,12 @@
 # <div align="center">mm2-plus</div>
 
-## <div align="center">A versatile pairwise aligner for genomic and spliced nucleotide sequences</div>
+## <div align="center">A versatile pairwise aligner for genomic sequences</div>
 
 ### Introduction
 
 **mm2-plus** is an optimized long-read to genome and genome-to-genome aligner, built on top of **minimap2** (Minimap2-2.28 (r1209)). It incorporates optimizations from **mm2-fast** (v1.0) and introduces novel parallel algorithms for efficient genome-to-genome alignment. **mm2-plus** achieves performance improvements by leveraging the following key optimizations:
 
-1. **Inter-chromosomal parallel chaining**
-2. **Intra-chromosomal parallel chaining**
-3. **Inter-chromosomal parallel backtracking**
+1. **Parallel chaining**
 4. **Sub-quadratic time chain overlap computation**
 5. **AVX2 and AVX512 alignment** (from [mm2-fast](https://github.com/bwa-mem2/mm2-fast))
 6. **AVX2 and AVX512 DP chaining** (from [Intel TAL](https://github.com/IntelLabs/Trans-Omics-Acceleration-Library))
@@ -29,11 +27,7 @@
 ```bash
 git clone https://github.com/gsc74/mm2-plus
 cd mm2-plus
-# build optimized alignment with inter cromosomal parallel chaining
 make all=1
-
-# build optimized alignment with intra cromosomal parallel chaining
-make all=1 par_chain_2=1 
 
 # test run
 ./minimap2 -cx asm20 test/MT-human.fa test/MT-orang.fa -o out.paf
@@ -82,15 +76,9 @@ The `diff` command should return null output, indicating no differences (0 lines
 To compare genome alignments, use the following commands:
 
 ```bash
-# Run mm2-plus with inter-chromosomal parallel chaining
 git clone https://github.com/gsc74/mm2-plus.git   
 cd mm2-plus && make all=1 
-./minimap2 -ax asm20 test/MT-human.fa test/MT-orang.fa > mm2-plus_inter.paf
-
-# Run mm2-plus with intra-chromosomal parallel chaining
-git clone https://github.com/gsc74/mm2-plus.git   
-cd mm2-plus && make all=1 par_chain_2=1
-./minimap2 -ax asm20 test/MT-human.fa test/MT-orang.fa > mm2-plus_intra.paf
+./minimap2 -ax asm20 test/MT-human.fa test/MT-orang.fa > mm2-plus.paf
 ```
 
 ```bash
@@ -103,15 +91,14 @@ cd minimap2 && make
 Compare the outputs:
 
 ```bash
-diff mm2.paf mm2-plus_inter.paf
-diff mm2.paf mm2-plus_intra.paf
+diff mm2.paf mm2-plus.paf
 ```
 
 Both `diff` commands should return null output.
 
 
 ### Performance
-We observed up to a 7.59x speedup for genome-to-genome alignment across all tested datasets, as detailed in our [paper](#citation). The speedup for long-read alignment is comparable to that achieved by [mm2-fast](https://github.com/bwa-mem2/mm2-fast). For a thorough evaluation and detailed experimentation, please refer to our [paper](#citation).
+We observed up to a 7x speedup for genome-to-genome alignment across all tested datasets, as detailed in our [paper](#citation). The speedup for long-read alignment is comparable to that achieved by [mm2-fast](https://github.com/bwa-mem2/mm2-fast). For a thorough evaluation and detailed experimentation, please refer to our [paper](#citation).
 
 ### <a name="citation"></a>Citation
 - **Ghanshyam Chandra, Md Vasimuddin, Sanchit Misra and Chirag Jain**. "[Methods to Accelerate Whole-Genome Alignment](https://www.biorxiv.org)". *bioRxiv* 2024.
