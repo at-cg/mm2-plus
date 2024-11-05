@@ -193,8 +193,9 @@ uint64_t *mg_chain_backtrack_par(void *km, int64_t n, int32_t *f, int64_t *p, in
 			free(p);
 		#endif
 	}
-	
-	#pragma omp parallel for num_threads(num_threads_b2b) reduction(+:n_u_global, n_v_global) schedule(dynamic, 1)
+
+
+	#pragma omp parallel for num_threads(num_threads_b2b) reduction(+:n_u_global, n_v_global) ordered schedule(static,1)
 	for (int32_t thd = 0; thd < num_chr; thd++)
 	{
 		int64_t n_z = 0;
@@ -265,7 +266,7 @@ uint64_t *mg_chain_backtrack_par(void *km, int64_t n, int32_t *f, int64_t *p, in
 		n_v_global += n_v;
 
 		// push u_vec to u and v_vec to v
-		#pragma omp critical // maintains thd order
+		#pragma omp ordered // maintains thd order
 		{
 			v_vec_global.insert(v_vec_global.end(), v_vec.begin(), v_vec.end()); v_vec.clear();
 			u_vec_global.insert(u_vec_global.end(), u_vec.begin(), u_vec.end()); u_vec.clear();

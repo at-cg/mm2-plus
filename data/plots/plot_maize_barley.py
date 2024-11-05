@@ -15,9 +15,9 @@ value_mm2_hap_chain_btk_sort_maize = np.array([0.117, 0.219 + 0.206 + 0.067 + 0.
 data_maize = np.array([value_mm2_maize, value_mm2_avx_maize, value_mm2_olp_maize, value_mm2_hap_chain_btk_maize, value_mm2_hap_chain_btk_sort_maize])
 
 # Data for barley with updated categories
-runtime_barley = [42612.805, 41985.786, 26910.393, 7396.472, 5915.177]  # in seconds
+runtime_barley = [42612.805, 41115.716, 26910.393, 7396.472, 5915.177]  # in seconds
 value_mm2_barley = np.array([0.036, 0.287 + 0.169 + 0.039 + 0.035, 0.327, 0.094, 0.012]) * runtime_barley[0]
-value_mm2_avx_barley = np.array([0.029, 0.289 + 0.170 + 0.038 + 0.035, 0.333, 0.095, 0.012]) * runtime_barley[1]
+value_mm2_avx_barley = np.array([0.031, 0.297 + 0.175 + 0.042 + 0.038, 0.341, 0.065, 0.013]) * runtime_barley[1]
 value_mm2_olp_barley = np.array([0.061, 0.444 + 0.262 + 0.064 + 0.058, 0.003, 0.092, 0.016]) * runtime_barley[2]
 value_mm2_hap_chain_btk_barley = np.array([0.242, 0.169 + 0.115 + 0.028 + 0.024, 0.010, 0.350, 0.062]) * runtime_barley[3]
 value_mm2_hap_chain_btk_sort_barley = np.array([0.083, 0.207 + 0.159 + 0.041 + 0.035, 0.013, 0.448, 0.014]) * runtime_barley[4]
@@ -66,7 +66,7 @@ ax2.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$'], rotation=0
 
 # Adjust y-limits to be non-normalized
 ax1.set_ylim(0, max(bottom_barley) + 5000)
-ax2.set_ylim(0, max(bottom_maize) + 3000)
+ax2.set_ylim(0, max(bottom_maize) + 2000)
 
 # Add yticks as runtime in hours
 ax1.set_yticks(range(0, int(max(bottom_barley) + 1000), 10000))
