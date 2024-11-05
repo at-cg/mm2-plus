@@ -6,8 +6,8 @@ import seaborn as sns
 datasets = ['D_Human', 'D_Primates', 'D_Barley']
 
 # Multiplying by 100 as specified
-human  = np.array([0.091, 0.52 + 0.046, 0.048, 0.289, 0.007]) * 100
-primates = np.array([0.078, 0.379 + 0.037, 0.012, 0.490, 0.005]) * 100
+human  = np.array([0.098, 0.318 + 0.186 + 0.031 + 0.024, 0.022, 0.313, 0.009]) * 100
+primates = np.array([0.077, 0.246 + 0.106 + 0.016 + 0.014, 0.012, 0.525, 0.004]) * 100
 barley = np.array([0.027, 0.433 + 0.085, 0.354, 0.089, 0.012]) * 100
 
 # Reorder the data, titles, runtimes, and CPU usages to match the desired output
@@ -23,10 +23,10 @@ long_categories = [
 ]
 
 # Reordered total runtimes for each dataset
-runtimes = [42612.805, 1237.404, 2040.404]
+runtimes = [42612.805, 1175.378, 2171.764]
 
 # Reordered % CPU usage for each dataset (already divided by 4800 and multiplied by 100)
-cpu_usages = [109/4800*100, 277/4800*100, 303/4800*100]
+cpu_usages = [109/4800*100, 297/4800*100, 318/4800*100]
 
 # Create a figure with 3 subplots (one for each dataset)
 fig, axes = plt.subplots(1, 3, figsize=(16, 5))
