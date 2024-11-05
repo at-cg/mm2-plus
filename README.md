@@ -1,4 +1,4 @@
-[![GitHub Downloads](https://img.shields.io/github/downloads/at-cg/mm2-plus/total.svg?style=social&logo=github&label=Download)](https://github.com/at-cg/mm2-plus/releases)
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/at-cg/mm2-plus/total)
 ## mm2-plus
 
 ### Introduction
