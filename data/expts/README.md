@@ -15,8 +15,8 @@ We provide scripts to reproduce the results. Please execute the following comman
 ```bash
 # Get the minimap2 v2.28 (with the profiling)
 unzip minimap2_base.zip
-git clone https://github.com/at-cg/mm2-plus.git
-git clone https://github.com/lh3/minimap2
+git clone -b 'v1.0' --single-branch --depth 1 https://github.com/at-cg/mm2-plus.git
+git clone -b 'v2.28' --single-branch --depth 1 https://github.com/lh3/minimap2
 # build the tools
 ./make_exec.sh
 cd minimap2 && make && cd ..
@@ -38,10 +38,10 @@ cd barley && ./get_fa.sh && cd ..
 # Long-read datasets
 
 # Create directory and get tools
-mkdir -p Long-reads && cd Long-reads
-git clone https://github.com/at-cg/mm2-plus.git
-cd mm2-plus && git checkout dacaad1 && cd .. # checkout the old commit
-git clone https://github.com/lh3/minimap2
+mkdir -p Long_reads && cd Long_reads
+git clone -b 'v1.0' --single-branch --depth 1 https://github.com/at-cg/mm2-plus.git
+cd mm2-plus && cd .. # checkout the old commit
+git clone -b 'v2.28' --single-branch --depth 1 https://github.com/lh3/minimap2
 cp -r mm2-plus mm2-fast
 cd mm2-plus && make all=1 && cd ..
 cd mm2-fast && make mm2_fast=1 && cd ..
@@ -94,7 +94,7 @@ seqkit sample -p 0.1 SRR24462105.fastq -o SRR24462105_10p.fastq
 ./map_barley-inter.sh
 
 # Run the long-reads alignment
-cd Long-reads
+cd Long_reads
 
 # HiFi
 minimap2/minimap2 -t48 -ax map-hifi GCF_009914755.1_T2T-CHM13v2.0_genomic.fna SRR26402938.fastq > mm2_HiFi.paf
@@ -147,9 +147,9 @@ cd barley
 
 ### 4. Get the anchor distribution
 ```bash
-# build mm2-plus to write anchor_dist.txt
-git clone https://github.com/at-cg/mm2-plus.git
-cd mm2-plus && git checkout dacaad1 && make get_dist=1 && cd .. # checkout the old commit
+# build mm2-plus to write anchor_dist.txt and count_chains.txt
+git clone -b 'v1.0' --single-branch --depth 1 https://github.com/at-cg/mm2-plus.git
+cd mm2-plus && make all=1 get_dist=1 && cd .. # checkout the old commit
 
 # (A) Human-Human
 cd human

@@ -19,6 +19,7 @@ uint64_t km_size = 500000000; // 500 MB
 int km_top;
 int32_t num_threads_b2b;
 std::fstream anchor_dist_file;
+std::fstream count_chains_file;
 
 // Read times
 int32_t n_seqs_ = 0;
@@ -165,6 +166,7 @@ int main(int argc, char *argv[])
 	// open a file
 	#ifdef GET_DIST
 		anchor_dist_file.open("anchor_dist.txt", std::ios::out);
+		count_chains_file.open("count_chains.txt", std::ios::out);
 	#endif
 
 	// measure time
@@ -559,6 +561,7 @@ int main(int argc, char *argv[])
 	// close a file
 	#ifdef GET_DIST
 		anchor_dist_file.close();
+		count_chains_file.close();
 	#endif
 	return 0;
 }

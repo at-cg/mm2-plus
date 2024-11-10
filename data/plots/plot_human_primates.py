@@ -54,15 +54,15 @@ ax1.set_title('(C) Human-Human', fontsize=20)
 ax2.set_title('(D) Human-Bonobo', fontsize=20)
 
 # Set y-axis labels
-ax1.set_ylabel('Runtime (hours)', fontsize=19)
-ax2.set_ylabel('  ', fontsize=19)
+ax1.set_ylabel('Runtime (hours)', fontsize=20)
+ax2.set_ylabel('  ', fontsize=20)
 
 # Set x-tick labels for human and primates
 ax1.set_xticks(range(len(runtime_human)))
-ax1.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$'], rotation=0, fontsize=18)
+ax1.set_xticklabels(['baseline', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$'], rotation=0, fontsize=20)
 
 ax2.set_xticks(range(len(runtime_primates)))
-ax2.set_xticklabels(['base', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$'], rotation=0, fontsize=18)
+ax2.set_xticklabels(['baseline', '$+O_1$', '$+O_2$', '$+O_3$', '$+O_4$'], rotation=0, fontsize=20)
 
 # Adjust y-limits to be non-normalized
 ax1.set_ylim(0, max(bottom_human) + 200)
@@ -70,16 +70,16 @@ ax2.set_ylim(0, max(bottom_primates) + 300)
 
 # add yticks as [runtime[0], runtime[1], runtime[2], ...]/3600
 ax1.set_yticks(range(0, int(max(bottom_human) + 100), 500))
-ax1.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_human) + 100), 500)], fontsize=18)
+ax1.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_human) + 100), 500)], fontsize=19)
 ax2.set_yticks(range(0, int(max(bottom_primates) + 100), 500))
-ax2.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_primates) + 100), 500)], fontsize=18)
+ax2.set_yticklabels([f'{i/3600:.1f}' for i in range(0, int(max(bottom_primates) + 100), 500)], fontsize=19)
 
 ax1.grid(axis='y', linestyle='--', zorder=0)
 ax2.grid(axis='y', linestyle='--', zorder=0)
 
 # set xlabel for both subplots as 'Optimizations'
-ax1.set_xlabel('Optimizations', fontsize=19)
-ax2.set_xlabel('Optimizations', fontsize=19)
+ax1.set_xlabel('Optimizations', fontsize=20)
+ax2.set_xlabel('Optimizations', fontsize=20)
 
 # Adding a shared legend at the top
 # fig.legend(categories, loc='upper center', bbox_to_anchor=(0.5, 1.10), fontsize=12, ncol=6)

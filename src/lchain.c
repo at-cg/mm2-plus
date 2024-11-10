@@ -28,7 +28,7 @@ extern int32_t max_itr_1, max_itr_2;
 extern int32_t num_threads_b2b;
 extern float rmq_1_time_, rmq_2_time_, btk_1_time_, btk_2_time_;
 extern int32_t count_stages, is_g2g_aln;
-extern std::fstream anchor_dist_file;
+extern std::fstream anchor_dist_file, count_chains_file;
 
 static int64_t mg_chain_bk_end_par(const int32_t max_drop, const std::vector<mm128_t> &z, const int32_t *f, std::pair<int64_t, int32_t> *p_t_vec, const int64_t k_, const int64_t k)
 {
@@ -1118,6 +1118,13 @@ mm128_t *mg_lchain_rmq_opt(int max_dist, int max_dist_inner, int bw, int max_chn
 		kfree(km, p); kfree(km, f); kfree(km, t);
 	#endif
 
+	if (bw == 100000) // second stage
+	{
+		#ifdef GET_DIST
+			count_chains_file << n_u << "\n";
+		#endif
+	}
+
 	*n_u_ = n_u, *_u = u;
 	if (n_u == 0) {
 		kfree(km, a); 
@@ -1128,6 +1135,7 @@ mm128_t *mg_lchain_rmq_opt(int max_dist, int max_dist_inner, int bw, int max_chn
 		#endif
 		return 0;
 	}
+
 
 	return compact_a(km, n_u, u, n_v, v, a);
 }
@@ -1263,4 +1271,5 @@ mm128_t *mg_lchain_rmq(int max_dist, int max_dist_inner, int bw, int max_chn_ski
 	{
 		return mg_lchain_rmq_mm2(max_dist, max_dist_inner, bw, max_chn_skip, cap_rmq_size, min_cnt, min_sc, chn_pen_gap, chn_pen_skip, n, a, n_u_, _u, km, num_threads);
 	}
+	
 }

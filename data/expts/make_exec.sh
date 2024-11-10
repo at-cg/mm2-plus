@@ -1,12 +1,7 @@
 #!/usr/bin/bash
 
-# git clone https://github.com/gsc74/minimap2_base.git
-# git clone https://github.com/gsc74/mm2-plus.git
-
 set -e  # Exit immediately if a command exits with a non-zero status
 set -o pipefail  # Consider errors in a pipeline
-
-cd mm2-plus && git checkout dacaad1 && cd ..
 
 # Build minimap2-hap with avx + par_chain
 cd mm2-plus && make clean && make profile=1 avx=1 opt_olp=1

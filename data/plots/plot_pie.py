@@ -33,7 +33,7 @@ fig, axes = plt.subplots(1, 3, figsize=(16, 5))
 
 # Custom function to display only significant values
 def autopct_func(pct):
-    return f'{pct:.1f}%' if pct > 5 else ''
+    return f'{pct:.0f}%' if pct > 5 else ''
 
 # Loop over each dataset and create a pie chart
 for i, ax in enumerate(axes):
@@ -45,16 +45,16 @@ for i, ax in enumerate(axes):
     # Move value annotations outside the pie slices
     for autotext in autotexts:
         autotext.set_color('black')
-        autotext.set_fontsize(13)
+        autotext.set_fontsize(15)
     
     # Add runtime at the bottom of each pie chart
-    ax.text(0, -1.3, f'Runtime: {runtimes[i]/3600:.2f}h', ha='center', fontsize=14)
+    ax.text(0, -1.3, f'Runtime: {runtimes[i]/3600:.2f}h', ha='center', fontsize=15)
     
     # Add % CPU usage below the runtime
-    ax.text(0, -1.5, f'CPU efficiency: {cpu_usages[i]:.2f}%', ha='center', fontsize=14)
+    ax.text(0, -1.5, f'CPU efficiency: {cpu_usages[i]:.2f}%', ha='center', fontsize=15)
 
 # Add a single legend using the long category names
-fig.legend(wedges, long_categories, loc='upper center', bbox_to_anchor=(0.5, 1.07), fontsize=13, ncol=3)
+fig.legend(wedges, long_categories, loc='upper center', bbox_to_anchor=(0.5, 1.07), fontsize=14, ncol=3)
 
 # Adjust the layout to make space for the legend and runtimes
 plt.subplots_adjust(top=0.85, bottom=0.2)
