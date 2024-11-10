@@ -12,12 +12,6 @@ make clean && make profile=1 avx=1 opt_olp=1 par_chain_1=1 par_btk=1
 cp minimap2 ../minimap2_aoc1b
 make clean && make profile=1 avx=1 opt_olp=1 par_chain_1=1 par_btk=1 par_sort=1
 cp minimap2 ../minimap2_aoc1bs
-make clean && make profile=1 avx=1 opt_olp=1 par_chain_2=1
-cp minimap2 ../minimap2_aoc2
-make clean && make profile=1 avx=1 opt_olp=1 par_chain_2=1 par_btk=1
-cp minimap2 ../minimap2_aoc2b
-make clean && make profile=1 avx=1 opt_olp=1 par_chain_2=1 par_btk=1 par_sort=1
-cp minimap2 ../minimap2_aoc2bs
 cd ..
 
 mkdir -p barley_mapped human_mapped primates_mapped maize_mapped
