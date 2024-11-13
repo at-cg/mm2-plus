@@ -6,7 +6,7 @@
 **mm2-plus** is an optimized long-read to genome and genome-to-genome aligner, built on top of **minimap2** (Minimap2-2.28 (r1209)). It incorporates optimizations from **mm2-fast** (v1.0) and introduces novel parallel algorithms for efficient genome-to-genome alignment. **mm2-plus** achieves performance improvements by leveraging the following key optimizations:
 
 1. **Parallel chaining**
-4. **Sub-quadratic time chain overlap computation**
+4. **Faster interval tree based algorithm for marking primary chains**
 5. **AVX2 and AVX512 alignment** (from [mm2-fast](https://github.com/bwa-mem2/mm2-fast))
 6. **AVX2 and AVX512 DP chaining** (from [Intel TAL](https://github.com/IntelLabs/Trans-Omics-Acceleration-Library))
 7. **Parallel anchor sorting** (GNU parallel [std::stable_sort](https://gcc.gnu.org/onlinedocs/gcc-4.8.1/libstdc++/manual/manual/parallel_mode_using.html))
