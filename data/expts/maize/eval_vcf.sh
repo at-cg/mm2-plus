@@ -1,15 +1,16 @@
 #!/usr/bin/bash
 # Compute VCF files
-ref_fasta=GCF_009914755.1_T2T-CHM13v2.0_genomic.fna
-cat base.paf | sort -k6,6 -k8,8n | paftools.js call -f "$ref_fasta" - | bgzip > base.vcf.gz
-cat hap.paf | sort -k6,6 -k8,8n | paftools.js call  -f "$ref_fasta" - | bgzip > hap.vcf.gz
+ref_fasta=Zm-Mo17-REFERENCE-CAU-2.0.fa
+samtools faidx ${ref_fasta}
+cat minimap2.paf | sort -k6,6 -k8,8n | paftools.js call -f "$ref_fasta" - | bgzip > minimap2.vcf.gz
+cat mm2plus.paf | sort -k6,6 -k8,8n | paftools.js call  -f "$ref_fasta" - | bgzip > mm2plus.vcf.gz
 
 # index VCF files
-bcftools index --csi base.vcf.gz
-bcftools index --csi hap.vcf.gz
+bcftools index --csi minimap2.vcf.gz
+bcftools index --csi mm2plus.vcf.gz
 
 # Compare the VCF files
-bcftools isec -p out_dir -Oz base.vcf.gz hap.vcf.gz
+bcftools isec -p out_dir -Oz minimap2.vcf.gz mm2plus.vcf.gz
 
 # index files
 bcftools index --csi out_dir/0000.vcf.gz
