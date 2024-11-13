@@ -42,15 +42,15 @@ cd barley && ./get_fa.sh && cd ..
 ./map_human-base.sh
 ./map_human-plus.sh
 
-# (A) Human-Bonobo
+# (B) Human-Bonobo
 ./map_primates-base.sh
 ./map_primates-plus.sh
 
-# (A) Maize-Maize
+# (C) Maize-Maize
 ./map_maize-base.sh
 ./map_maize-plus.sh
 
-# (A) Barley-Barley
+# (D) Barley-Barley
 ./map_barley-base.sh
 ./map_barley-plus.sh
 ```
@@ -62,17 +62,17 @@ cd human
 ./get_vcf.sh
 ./eval_vcf.sh
 
-# (A) Human-Bonobo
+# (B) Human-Bonobo
 cd primates
 ./get_vcf.sh
 ./eval_vcf.sh
 
-# (A) Maize-Maize
+# (C) Maize-Maize
 cd maize
 ./get_vcf.sh
 ./eval_vcf.sh
 
-# (A) Barley-Barley
+# (D) Barley-Barley
 cd barley
 ./get_vcf.sh
 ./eval_vcf.sh
