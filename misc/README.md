@@ -2,8 +2,8 @@
 
 ```sh
 # install minimap2
-git clone https://github.com/lh3/minimap2
-cd minimap2 && make
+git clone https://github.com/at-cg/mm2-plus
+cd mm2-plus && make all=1
 # install the k8 javascript shell
 curl -L https://github.com/attractivechaos/k8/releases/download/v0.2.4/k8-0.2.4.tar.bz2 | tar -jxf -
 cp k8-0.2.4/k8-`uname -s` k8              # or copy it to a directory on your $PATH
