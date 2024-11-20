@@ -41,7 +41,7 @@ int32_t max_itr_1;
 int32_t max_itr_2;
 int32_t count_stages = 0;
 int32_t max_thds;
-int32_t is_g2g_aln = 0;
+int32_t is_g2g_aln = 0, is_splice_sr = 0;
 
 // For logging time
 float  seed_time = 0.0f, alignment_time = 0.0f, rmq_1_time = 0.0f, rmq_2_time = 0.0f, other_time = 0.0f, btk_1_time = 0.0f, btk_2_time = 0.0f;
@@ -192,6 +192,10 @@ int main(int argc, char *argv[])
 			if (mm_set_opt(o.arg, &ipt, &opt) == 0 &&  (strcmp(o.arg, "asm5") == 0 || strcmp(o.arg, "asm10") == 0 || strcmp(o.arg, "asm20") == 0))
 			{
 				is_g2g_aln = 1; // enable Genome-to-Genome alignment
+			}
+			if (mm_set_opt(o.arg, &ipt, &opt) == 0 &&  (strcmp(o.arg, "sr") == 0 || strcmp(o.arg, "splice") == 0))
+			{
+				is_splice_sr = 1; // enable Genome-to-Genome alignment
 			}
 			if (mm_set_opt(o.arg, &ipt, &opt) < 0) {
 				fprintf(stderr, "[ERROR] unknown preset '%s'\n", o.arg);

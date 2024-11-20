@@ -27,7 +27,7 @@ extern float mean_itr_1_, mean_itr_2_;
 extern int32_t max_itr_1, max_itr_2;
 extern int32_t num_threads_b2b;
 extern float rmq_1_time_, rmq_2_time_, btk_1_time_, btk_2_time_;
-extern int32_t count_stages, is_g2g_aln;
+extern int32_t count_stages, is_g2g_aln, is_splice_sr;
 extern std::fstream anchor_dist_file, count_chains_file;
 
 static int64_t mg_chain_bk_end_par(const int32_t max_drop, const std::vector<mm128_t> &z, const int32_t *f, std::pair<int64_t, int32_t> *p_t_vec, const int64_t k_, const int64_t k)
@@ -425,41 +425,9 @@ mm128_t *mg_lchain_dp(int max_dist_x, int max_dist_y, int bw, int max_skip, int 
 	v = Kmalloc(km, int32_t, n);
 	t = Kcalloc(km, int32_t, n);
 
-	#if defined(PAR_DP_CHAIN) && (defined(__AVX512BW__) || defined(__AVX2__))
-			int32_t *v_1, *p_1;
-			uint32_t *f_1;
-			v_1 = Kmalloc(km, int32_t, n);
-			p_1 = Kmalloc(km, int32_t, n);
-			f_1 = Kmalloc(km, uint32_t, n);
-			// Parallel chaining data-structures
-			anchor_t* anchors = (anchor_t*)malloc(n* sizeof(anchor_t));
-			for (i = 0; i < n; ++i) {
-				uint64_t ri = a[i].x;
-				int32_t qi = (int32_t)a[i].y, q_span = a[i].y>>32&0xff; // NB: only 8 bits of span is used!!!
-				anchors[i].r = ri;
-				anchors[i].q = qi;
-				anchors[i].l = q_span;
-			}
-			num_bits_t *anchor_r, *anchor_q, *anchor_l;
-			create_SoA_Anchors_32_bit(anchors, n, anchor_r, anchor_q, anchor_l);
-			dp_chain obj(max_dist_x, max_dist_y, bw, max_skip, max_iter, min_cnt, min_sc, chn_pen_gap, chn_pen_skip, is_cdna, n_seg);
-			obj.mm_dp_vectorized(n, &anchors[0], anchor_r, anchor_q, anchor_l, f_1, p_1, v_1, max_dist_x, max_dist_y, NULL, NULL);
-			// -16 is due to extra padding at the start of arrays
-			anchor_r -= 16; anchor_q -= 16; anchor_l -= 16;
-			free(anchor_r); 
-			free(anchor_q); 
-			free(anchor_l);
-			free(anchors);
-
-			// copy the results
-			for(i = 0; i < n; i++)
-			{
-				f[i] = f_1[i];
-				p[i] = p_1[i];
-				v[i] = v_1[i];
-			}
-			kfree(km, p_1); kfree(km, f_1); kfree(km, v_1);
-	#else
+	if (is_splice_sr)
+	{
+		fprintf(stderr, "Error: Splice-aware chaining is not supported in this version of minigraph\n");
 		// fill the score and backtrack arrays
 		for (i = 0, max_ii = -1; i < n; ++i) {
 			int64_t max_j = -1, end_j;
@@ -500,7 +468,85 @@ mm128_t *mg_lchain_dp(int max_dist_x, int max_dist_y, int bw, int max_skip, int 
 			if (mmax_f < max_f) mmax_f = max_f;
 			//fprintf(stderr, "X1\t%ld\t%ld:%d\t%ld\t%ld:%d\t%ld\t%ld\n", (long)i, (long)(a[i].x>>32), (int32_t)a[i].x, (long)max_j, max_j<0?-1L:(long)(a[max_j].x>>32), max_j<0?-1:(int32_t)a[max_j].x, (long)max_f, (long)v[i]);
 		}
-	#endif
+	}else
+	{
+		#if defined(PAR_DP_CHAIN) && (defined(__AVX512BW__) || defined(__AVX2__))
+			int32_t *v_1, *p_1;
+			uint32_t *f_1;
+			v_1 = Kmalloc(km, int32_t, n);
+			p_1 = Kmalloc(km, int32_t, n);
+			f_1 = Kmalloc(km, uint32_t, n);
+			// Parallel chaining data-structures
+			anchor_t* anchors = (anchor_t*)malloc(n* sizeof(anchor_t));
+			for (i = 0; i < n; ++i) {
+				uint64_t ri = a[i].x;
+				int32_t qi = (int32_t)a[i].y, q_span = a[i].y>>32&0xff; // NB: only 8 bits of span is used!!!
+				anchors[i].r = ri;
+				anchors[i].q = qi;
+				anchors[i].l = q_span;
+			}
+			num_bits_t *anchor_r, *anchor_q, *anchor_l;
+			create_SoA_Anchors_32_bit(anchors, n, anchor_r, anchor_q, anchor_l);
+			dp_chain obj(max_dist_x, max_dist_y, bw, max_skip, max_iter, min_cnt, min_sc, chn_pen_gap, chn_pen_skip, is_cdna, n_seg);
+			obj.mm_dp_vectorized(n, &anchors[0], anchor_r, anchor_q, anchor_l, f_1, p_1, v_1, max_dist_x, max_dist_y, NULL, NULL);
+			// -16 is due to extra padding at the start of arrays
+			anchor_r -= 16; anchor_q -= 16; anchor_l -= 16;
+			free(anchor_r); 
+			free(anchor_q); 
+			free(anchor_l);
+			free(anchors);
+
+			// copy the results
+			for(i = 0; i < n; i++)
+			{
+				f[i] = f_1[i];
+				p[i] = p_1[i];
+				v[i] = v_1[i];
+			}
+			kfree(km, p_1); kfree(km, f_1); kfree(km, v_1);
+		#else
+			// fill the score and backtrack arrays
+			for (i = 0, max_ii = -1; i < n; ++i) {
+				int64_t max_j = -1, end_j;
+				int32_t max_f = a[i].y>>32&0xff, n_skip = 0;
+				while (st < i && (a[i].x>>32 != a[st].x>>32 || a[i].x > a[st].x + max_dist_x)) ++st;
+				if (i - st > max_iter) st = i - max_iter;
+				for (j = i - 1; j >= st; --j) {
+					int32_t sc;
+					sc = comput_sc(&a[i], &a[j], max_dist_x, max_dist_y, bw, chn_pen_gap, chn_pen_skip, is_cdna, n_seg);
+					if (sc == INT32_MIN) continue;
+					sc += f[j];
+					if (sc > max_f) {
+						max_f = sc, max_j = j;
+						if (n_skip > 0) --n_skip;
+					} else if (t[j] == (int32_t)i) {
+						if (++n_skip > max_skip)
+							break;
+					}
+					if (p[j] >= 0) t[p[j]] = i;
+				}
+				end_j = j;
+				if (max_ii < 0 || a[i].x - a[max_ii].x > (int64_t)max_dist_x) {
+					int32_t max = INT32_MIN;
+					max_ii = -1;
+					for (j = i - 1; j >= st; --j)
+						if (max < f[j]) max = f[j], max_ii = j;
+				}
+				if (max_ii >= 0 && max_ii < end_j) {
+					int32_t tmp;
+					tmp = comput_sc(&a[i], &a[max_ii], max_dist_x, max_dist_y, bw, chn_pen_gap, chn_pen_skip, is_cdna, n_seg);
+					if (tmp != INT32_MIN && max_f < tmp + f[max_ii])
+						max_f = tmp + f[max_ii], max_j = max_ii;
+				}
+				f[i] = max_f, p[i] = max_j;
+				v[i] = max_j >= 0 && v[max_j] > max_f? v[max_j] : max_f; // v[] keeps the peak score up to i; f[] is the score ending at i, not always the peak
+				if (max_ii < 0 || (a[i].x - a[max_ii].x <= (int64_t)max_dist_x && f[max_ii] < f[i]))
+					max_ii = i;
+				if (mmax_f < max_f) mmax_f = max_f;
+				//fprintf(stderr, "X1\t%ld\t%ld:%d\t%ld\t%ld:%d\t%ld\t%ld\n", (long)i, (long)(a[i].x>>32), (int32_t)a[i].x, (long)max_j, max_j<0?-1L:(long)(a[max_j].x>>32), max_j<0?-1:(int32_t)a[max_j].x, (long)max_f, (long)v[i]);
+			}
+		#endif
+	}
 
 	u = mg_chain_backtrack(km, n, f, p, v, t, min_cnt, min_sc, max_drop, &n_u, &n_v);
 	*n_u_ = n_u, *_u = u; // NB: note that u[] may not be sorted by score here
