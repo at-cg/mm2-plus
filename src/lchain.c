@@ -427,7 +427,6 @@ mm128_t *mg_lchain_dp(int max_dist_x, int max_dist_y, int bw, int max_skip, int 
 
 	if (is_splice_sr)
 	{
-		fprintf(stderr, "Error: Splice-aware chaining is not supported in this version of minigraph\n");
 		// fill the score and backtrack arrays
 		for (i = 0, max_ii = -1; i < n; ++i) {
 			int64_t max_j = -1, end_j;
