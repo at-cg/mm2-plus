@@ -386,7 +386,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (argc == o.ind || fp_help == stdout) {
-		fprintf(fp_help, "Usage: minimap2 [options] <target.fa>|<target.idx> [query.fa] [...]\n");
+		fprintf(fp_help, "Usage: mm2plus [options] <target.fa>|<target.idx> [query.fa] [...]\n");
 		fprintf(fp_help, "Options:\n");
 		fprintf(fp_help, "  Indexing:\n");
 		fprintf(fp_help, "    -H           use homopolymer-compressed k-mer (preferrable for PacBio)\n");

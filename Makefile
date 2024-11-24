@@ -4,7 +4,7 @@ INCLUDES=
 OBJS=		src/kthread.o src/kalloc.o src/misc.o src/bseq.o src/sketch.o src/sdust.o src/options.o src/index.o \
 			src/lchain.o src/align.o src/hit.o src/seed.o src/map.o src/format.o src/pe.o src/esterr.o src/splitidx.o \
 			src/ksw2_ll_sse.o src/parallel_sort.o
-PROG=		minimap2
+PROG=		mm2plus
 PROG_EXTRA=	sdust minimap2-lite
 LIBS=		-fopenmp -lm -lz -lpthread
 
@@ -95,7 +95,7 @@ all:$(PROG)
 
 extra:all $(PROG_EXTRA)
 
-minimap2:src/main.o libminimap2.a
+mm2plus:src/main.o libminimap2.a
 		$(CXX) $(CPPFLAGS) src/main.o -o $@ -L. -lminimap2 $(LIBS)
 
 minimap2-lite:src/example.o libminimap2.a

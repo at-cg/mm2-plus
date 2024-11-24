@@ -7,9 +7,9 @@
 
 1. **Parallel chaining**
 4. **Faster interval tree based algorithm for marking primary chains**
-5. **AVX2 and AVX512 alignment** (from [mm2-fast](https://github.com/bwa-mem2/mm2-fast))
-6. **AVX2 and AVX512 DP chaining** (from [Intel TAL](https://github.com/IntelLabs/Trans-Omics-Acceleration-Library))
-7. **Parallel anchor sorting** (GNU parallel [std::stable_sort](https://gcc.gnu.org/onlinedocs/gcc-4.8.1/libstdc++/manual/manual/parallel_mode_using.html))
+5. **AVX2/AVX512 intrinsic-based alignment** (from [mm2-fast](https://github.com/bwa-mem2/mm2-fast))
+6. **AVX2/AVX512 intrinsic-based DP chaining** (from [Intel TAL](https://github.com/IntelLabs/Trans-Omics-Acceleration-Library))
+7. **Parallel anchor sorting** (GNU parallel stable sort [std::stable_sort](https://gcc.gnu.org/onlinedocs/gcc-4.8.1/libstdc++/manual/manual/parallel_mode_using.html))
 
 **mm2-plus** serves as a drop-in replacement for **minimap2**, providing near-identical output while significantly reducing execution time, especially for genome-to-genome alignments.
 
@@ -29,7 +29,7 @@ cd mm2-plus
 make all=1
 
 # test run
-./minimap2 -cx asm20 test/MT-human.fa test/MT-orang.fa -o out.paf
+./mm2plus -cx asm20 test/MT-human.fa test/MT-orang.fa -o out.paf
 ```
 
 ### Usage
@@ -37,10 +37,10 @@ mm2-plus uses all the command line options from minimap2, please use minimap2 [r
 
 ```bash
 # test read alignment
-./minimap2 -cx map-ont test/MT-human.fa test/MT-orang.fa -o out.paf
+./mm2plus -cx map-ont test/MT-human.fa test/MT-orang.fa -o out.paf
 
 # test genome alignment
-./minimap2 -cx asm20 test/MT-human.fa test/MT-orang.fa -o out.paf
+./mm2plus -cx asm20 test/MT-human.fa test/MT-orang.fa -o out.paf
 ```
 
 
@@ -50,9 +50,9 @@ The accuracy of `mm2-plus` can be validated against `minimap2` (v2.28). Ensure t
 
 ```bash
 # Run mm2-plus
-git clone https://github.com/at-cg/mm2-plus.git   
+git clone https://github.com/at-cg/mm2plus.git   
 cd mm2-plus && make all=1 
-./minimap2 -ax map-ont test/MT-human.fa test/MT-orang.fa --max-chain-skip=1000000 > mm2-plus.paf
+./mm2plus -ax map-ont test/MT-human.fa test/MT-orang.fa --max-chain-skip=1000000 > mm2-plus.paf
 ```
 
 ```bash
@@ -66,7 +66,7 @@ Compare the outputs:
 
 ```bash
 # Get the difference
-diff mm2.paf mm2-plus.paf
+diff mm2.paf mm2plus.paf
 ```
 
 The `diff` command should return null output, indicating no differences (0 lines).
@@ -77,12 +77,12 @@ To compare genome alignments, use the following commands:
 ```bash
 git clone https://github.com/at-cg/mm2-plus.git   
 cd mm2-plus && make all=1 
-./minimap2 -ax asm20 test/MT-human.fa test/MT-orang.fa > mm2-plus.paf
+./mm2plus -ax asm20 test/MT-human.fa test/MT-orang.fa > mm2plus.paf
 ```
 
 ```bash
 # Run minimap2
-git clone https://github.com/lh3/minimap2.git -b v2.24
+git clone https://github.com/lh3/minimap2.git -b v2.28
 cd minimap2 && make
 ./minimap2 -ax asm20 test/MT-human.fa test/MT-orang.fa > mm2.paf
 ```
@@ -90,7 +90,7 @@ cd minimap2 && make
 Compare the outputs:
 
 ```bash
-diff mm2.paf mm2-plus.paf
+diff mm2.paf mm2plus.paf
 ```
 
 Both `diff` commands should return null output.
@@ -100,7 +100,7 @@ Both `diff` commands should return null output.
 We observed up to a 7x speedup for genome-to-genome alignment across all tested datasets, as detailed in our [paper](#citation). The speedup for long-read alignment is comparable to that achieved by [mm2-fast](https://github.com/bwa-mem2/mm2-fast). For a thorough evaluation and detailed experimentation, please refer to our [paper](#citation).
 
 ### <a name="citation"></a>Citation
-- **Ghanshyam Chandra, Md Vasimuddin, Sanchit Misra and Chirag Jain**. "[Methods to Accelerate Whole-Genome Alignment](https://www.biorxiv.org)". *bioRxiv* 2024.
+- **Ghanshyam Chandra, Md Vasimuddin, Sanchit Misra and Chirag Jain**. "[Accelerating whole-genome alignment in the age of complete genome assemblies](https://www.biorxiv.org)". *bioRxiv* 2024.
 
 ---
 <a name="readme_mm2"></a> The original README content of minimap2 follows.

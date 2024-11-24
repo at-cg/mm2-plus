@@ -18,8 +18,8 @@ bcftools index --csi out_dir/0001.vcf.gz
 bcftools index --csi out_dir/0002.vcf.gz
 
 # Generate statistics
-bcftools stats out_dir/0000.vcf.gz > out_dir/fp_stats.txt
-bcftools stats out_dir/0001.vcf.gz > out_dir/fn_stats.txt
+bcftools stats out_dir/0000.vcf.gz > out_dir/fn_stats.txt
+bcftools stats out_dir/0001.vcf.gz > out_dir/fp_stats.txt
 bcftools stats out_dir/0002.vcf.gz > out_dir/tp_stats.txt
 
 python3 get_f1.py
