@@ -5,7 +5,8 @@ ZLIB_DIR := $(CURDIR)/external/zlib
 # URLs for downloading the libraries
 JEMALLOC_URL := https://github.com/jemalloc/jemalloc/releases/download/5.3.0/jemalloc-5.3.0.tar.bz2
 ZLIB_URL := https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz
-
+CPPFLAGS := 
+LIBS :=
 # List of object files
 OBJS=		src/kthread.o src/kalloc.o src/misc.o src/bseq.o src/sketch.o src/sdust.o src/options.o src/index.o \
 			src/lchain.o src/align.o src/hit.o src/seed.o src/map.o src/format.o src/pe.o src/esterr.o src/splitidx.o \
@@ -27,61 +28,80 @@ ifeq ($(mm2_fast),1)
 	CPPFLAGS+=-DMM2_FAST
 	avx=1
 	par_dp_chain=1
+	base=0
+	all=0
 endif
 
 ifeq ($(par_dp_chain),1)
 	CPPFLAGS+=-DPAR_DP_CHAIN
+	base=0
+	all=0
 endif
 
 ifeq ($(opt_olp),1)
 	CPPFLAGS+=-DOPT_OLP
+	base=0
+	all=0
 endif
 
 ifeq ($(par_sort),1)
 	CPPFLAGS+=-DPAR_SORT
+	base=0
+	all=0
 endif
 
 ifeq ($(par_btk),1)
 	CPPFLAGS+=-DPAR_BTK
+	base=0
+	all=0
 endif
 
 ifeq ($(par_chain_1),1)
 	CPPFLAGS+=-DPAR_CHAIN_1
+	base=0
+	all=0
 endif
 
 ifeq ($(par_chain_2),1)
 	CPPFLAGS+=-DPAR_CHAIN_2
+	base=0
+	all=0
 endif
 
 ifeq ($(get_dist),1)
 	CPPFLAGS+=-DGET_DIST -DPAR_CHAIN_1
-endif
-
-ifeq ($(base),1)
-	# Only minimap2 flags
-	CPPFLAGS := -g -Wall -O2 -w -DHAVE_KALLOC -I$(ZLIB_DIR)/include
+	base=0
 	all=0
 endif
 
-ifeq ($(all),)
-	CPPFLAGS := -g -std=c++2a -O3 -w -DHAVE_KALLOC -I$(JEMALLOC_DIR)/include -I$(ZLIB_DIR)/include
-	CPPFLAGS+=-DPAR_BTK -DPAR_SORT -DPAR_CHAIN_1 -DPAR_DP_CHAIN -DOPT_OLP
-	avx=1
+ifeq ($(base),1)
+	all=0
 endif
 
 ifneq ($(aarch64),)
 	arm_neon=1
+	CPPFLAGS := -g -std=c++2a -O3 -w -DHAVE_KALLOC # use external zlib
 	LIBS += -fopenmp -lm -lz -lpthread
+else
+	ifeq ($(avx),1)
+		CPPFLAGS+=-DALIGN_AVX -DAPPLY_AVX2
+		all=0
+	endif
+endif
+
+ifeq ($(all),)
+	CPPFLAGS+=-DPAR_BTK -DPAR_SORT -DPAR_CHAIN_1 -DPAR_DP_CHAIN -DOPT_OLP
+	avx=1
+	base=0
 endif
 
 ifeq ($(arm_neon),) # if arm_neon is not defined
 ifeq ($(sse2only),) # if sse2only is not defined
-	ifeq ($(avx),1)
-		CPPFLAGS+=-DALIGN_AVX -DAPPLY_AVX2
-	endif
 	ifeq ($(base),1)
+		CPPFLAGS += -g -Wall -O2 -w -DHAVE_KALLOC -I$(ZLIB_DIR)/include
 		LIBS += -Wl,-Bstatic -lz -Wl,-Bdynamic -fopenmp -lm -lpthread -ldl
 	else
+		CPPFLAGS += -g -std=c++2a -O3 -w -DHAVE_KALLOC -I$(JEMALLOC_DIR)/include -I$(ZLIB_DIR)/include
 		LIBS += -Wl,-Bstatic -ljemalloc -lz -Wl,-Bdynamic -fopenmp -lm -lpthread -ldl
 	endif
 	OBJS+=src/ksw2_extz2_sse41.o src/ksw2_extd2_sse41.o src/ksw2_exts2_sse41.o src/ksw2_extz2_sse2.o src/ksw2_extd2_sse2.o src/ksw2_exts2_sse2.o src/ksw2_dispatch.o src/ksw2_extd2_avx.o
