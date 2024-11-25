@@ -13,7 +13,6 @@ OBJS=		src/kthread.o src/kalloc.o src/misc.o src/bseq.o src/sketch.o src/sdust.o
 # Name of the executable
 PROG=		mm2plus
 # Compiler and linker flags
-CPPFLAGS := -g -std=c++2a -O3 -w -DHAVE_KALLOC -I$(JEMALLOC_DIR)/include -I$(ZLIB_DIR)/include
 LDFLAGS := -Wl,-L$(JEMALLOC_DIR)/lib -Wl,-L$(ZLIB_DIR)/lib
 
 # Extra flags and includes
@@ -59,10 +58,13 @@ ifeq ($(get_dist),1)
 endif
 
 ifeq ($(base),1)
+	# Only minimap2 flags
+	CPPFLAGS := -g -Wall -O2 -w -DHAVE_KALLOC -I$(ZLIB_DIR)/include
 	all=0
 endif
 
 ifeq ($(all),)
+	CPPFLAGS := -g -std=c++2a -O3 -w -DHAVE_KALLOC -I$(JEMALLOC_DIR)/include -I$(ZLIB_DIR)/include
 	CPPFLAGS+=-DPAR_BTK -DPAR_SORT -DPAR_CHAIN_1 -DPAR_DP_CHAIN -DOPT_OLP
 	avx=1
 endif
@@ -77,7 +79,11 @@ ifeq ($(sse2only),) # if sse2only is not defined
 	ifeq ($(avx),1)
 		CPPFLAGS+=-DALIGN_AVX -DAPPLY_AVX2
 	endif
-	LIBS += -Wl,-Bstatic -ljemalloc -lz -Wl,-Bdynamic -fopenmp -lm -lpthread -ldl
+	ifeq ($(base),1)
+		LIBS += -Wl,-Bstatic -lz -Wl,-Bdynamic -fopenmp -lm -lpthread -ldl
+	else
+		LIBS += -Wl,-Bstatic -ljemalloc -lz -Wl,-Bdynamic -fopenmp -lm -lpthread -ldl
+	endif
 	OBJS+=src/ksw2_extz2_sse41.o src/ksw2_extd2_sse41.o src/ksw2_exts2_sse41.o src/ksw2_extz2_sse2.o src/ksw2_extd2_sse2.o src/ksw2_exts2_sse2.o src/ksw2_dispatch.o src/ksw2_extd2_avx.o
 	EXTRAFLAGS+=-march=native
 else                # if sse2only is defined
