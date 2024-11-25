@@ -134,7 +134,7 @@ jemalloc:
 	tar -xjf jemalloc.tar.bz2 && \
 	cd jemalloc-5.3.0 && \
 	./configure --disable-shared --enable-static --prefix=$(JEMALLOC_DIR) && \
-	make && \
+	make -j4 && \
 	make install
 
 # Download and build zlib
@@ -147,7 +147,7 @@ zlib:
 	tar -xzf zlib.tar.gz && \
 	cd zlib-1.3.1 && \
 	./configure --static --prefix=$(ZLIB_DIR) && \
-	make && \
+	make -j4 && \
 	make install
 
 # Build dependencies
