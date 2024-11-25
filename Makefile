@@ -14,7 +14,6 @@ OBJS=		src/kthread.o src/kalloc.o src/misc.o src/bseq.o src/sketch.o src/sdust.o
 PROG=		mm2plus
 # Compiler and linker flags
 CPPFLAGS := -g -std=c++2a -O3 -w -DHAVE_KALLOC -I$(JEMALLOC_DIR)/include -I$(ZLIB_DIR)/include
-LIBS := -Wl,-Bstatic -ljemalloc -lz -Wl,-Bdynamic -fopenmp -lm -lpthread -ldl
 LDFLAGS := -Wl,-L$(JEMALLOC_DIR)/lib -Wl,-L$(ZLIB_DIR)/lib
 
 # Extra flags and includes
@@ -70,6 +69,7 @@ endif
 
 ifneq ($(aarch64),)
 	arm_neon=1
+	LIBS += -fopenmp -lm -lz -lpthread
 endif
 
 ifeq ($(arm_neon),) # if arm_neon is not defined
@@ -77,6 +77,7 @@ ifeq ($(sse2only),) # if sse2only is not defined
 	ifeq ($(avx),1)
 		CPPFLAGS+=-DALIGN_AVX -DAPPLY_AVX2
 	endif
+	LIBS += -Wl,-Bstatic -ljemalloc -lz -Wl,-Bdynamic -fopenmp -lm -lpthread -ldl
 	OBJS+=src/ksw2_extz2_sse41.o src/ksw2_extd2_sse41.o src/ksw2_exts2_sse41.o src/ksw2_extz2_sse2.o src/ksw2_extd2_sse2.o src/ksw2_exts2_sse2.o src/ksw2_dispatch.o src/ksw2_extd2_avx.o
 	EXTRAFLAGS+=-march=native
 else                # if sse2only is defined
