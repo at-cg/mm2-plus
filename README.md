@@ -3,13 +3,13 @@
 
 ### Introduction
 
-**mm2-plus** is an optimized long-read to genome and genome-to-genome aligner, built on top of **minimap2** (Minimap2-2.28 (r1209)). It incorporates optimizations from **mm2-fast** (v1.0) and introduces novel parallel algorithms for efficient genome-to-genome alignment. **mm2-plus** achieves performance improvements by leveraging the following key optimizations:
+**mm2-plus** is an fast long-read to genome and genome-to-genome aligner, built on top of **minimap2** (Minimap2-2.28 (r1209)). We incorporated optimizations from **mm2-fast** (v1.0) and implemented parallel algorithms for efficient genome-to-genome alignment. The optimizations include:
 
 1. **Parallel chaining**
-4. **Faster interval tree based algorithm for marking primary chains**
-5. **AVX2/AVX512 intrinsic-based alignment** (from [mm2-fast](https://github.com/bwa-mem2/mm2-fast))
-6. **AVX2/AVX512 intrinsic-based DP chaining** (from [Intel TAL](https://github.com/IntelLabs/Trans-Omics-Acceleration-Library))
-7. **Parallel anchor sorting** (GNU parallel stable sort [std::stable_sort](https://gcc.gnu.org/onlinedocs/gcc-4.8.1/libstdc++/manual/manual/parallel_mode_using.html))
+4. **Faster interval tree-based algorithm for selecting primary chains**
+5. **AVX2/AVX512 SIMD alignment** (from [mm2-fast](https://github.com/bwa-mem2/mm2-fast))
+6. **AVX2/AVX512 SIMD chaining** (from [Intel TAL](https://github.com/IntelLabs/Trans-Omics-Acceleration-Library))
+7. **Parallel sorting** (GNU parallel stable sort [std::stable_sort](https://gcc.gnu.org/onlinedocs/gcc-4.8.1/libstdc++/manual/manual/parallel_mode_using.html))
 
 **mm2-plus** serves as a drop-in replacement for **minimap2**, providing near-identical output while significantly reducing execution time, especially for genome-to-genome alignments.
 
@@ -21,7 +21,7 @@
 2. **Zlib** - [zlib](https://zlib.net/)
 3. **Jemalloc** - [jemalloc](https://github.com/jemalloc/jemalloc)
 
-We provide an automated script to simplify dependency installation. Using the command `make deps`, the script installs both **zlib** and **jemalloc** automatically.
+We provide an automated script to simplify the dependency installation. Assuming you already have GCC, you can use the command `make deps` to install both **zlib** and **jemalloc** automatically.
 
 ### Get mm2-plus
 
@@ -34,18 +34,18 @@ make deps
 make
 
 # test run
-./mm2plus -cx asm20 test/MT-human.fa test/MT-orang.fa -o out.paf
+./mm2plus -cx asm20 test/MT-human.fa test/MT-orang.fa > out.paf
 ```
 
 ### Usage
-mm2-plus uses all the command line options from minimap2, please use minimap2 [readme](#readme_mm2) for usage information. Here are some test exmaples for mm2-plus run
+mm2-plus offers same command line interface as minimap2. Therefore, users can refer to minimap2 [README](#readme_mm2). Here are some test exmaples for mm2-plus run
 
 ```bash
 # test read alignment
-./mm2plus -cx map-ont test/MT-human.fa test/MT-orang.fa -o out.paf
+./mm2plus -cx map-ont test/MT-human.fa test/reads.fa > out.paf
 
 # test genome alignment
-./mm2plus -cx asm20 test/MT-human.fa test/MT-orang.fa -o out.paf
+./mm2plus -cx asm20 test/MT-human.fa test/MT-orang.fa > out.paf
 ```
 
 
@@ -88,7 +88,7 @@ cd mm2-plus && make deps && make
 ```bash
 # Run minimap2
 git clone https://github.com/lh3/minimap2.git -b v2.28
-cd minimap2 && make deps && make
+cd minimap2 && make
 ./minimap2 -ax asm20 test/MT-human.fa test/MT-orang.fa > mm2.paf
 ```
 
@@ -98,11 +98,11 @@ Compare the outputs:
 diff mm2.paf mm2plus.paf
 ```
 
-Both `diff` commands should return null output.
+Both `diff` commands should return null output. For large genomes, there may be negligible differences in the PAF output. Refer to the [paper](#citation) for more information.
 
 
 ### Performance
-We observed up to a 7x speedup for genome-to-genome alignment across all tested datasets, as detailed in our [paper](#citation). The speedup for long-read alignment is comparable to that achieved by [mm2-fast](https://github.com/bwa-mem2/mm2-fast). For a thorough evaluation and detailed experimentation, please refer to our [paper](#citation).
+We observed up to 7x speedup for genome-to-genome alignment across all tested datasets. The speedup for long-read alignment is comparable to that achieved by [mm2-fast](https://github.com/bwa-mem2/mm2-fast). To see a thorough evaluation, please refer to our [paper](#citation).
 
 ### <a name="citation"></a>Citation
 - **Ghanshyam Chandra, Md Vasimuddin, Sanchit Misra and Chirag Jain**. "[Accelerating whole-genome alignment in the age of complete genome assemblies](https://www.biorxiv.org)". *bioRxiv* 2024.
