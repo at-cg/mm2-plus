@@ -15,18 +15,23 @@
 
 ### Prerequisites
 
-#### Before using mm2-plus, ensure you have the following dependencies installed:
+#### mm2-plus depends on the following:
 
 1. **GCC 9 or later** - [GCC](https://gcc.gnu.org/)
 2. **Zlib** - [zlib](https://zlib.net/)
-3. **Jemalloc** - [Jemalloc](https://github.com/jemalloc/jemalloc)
+3. **Jemalloc** - [jemalloc](https://github.com/jemalloc/jemalloc)
+
+We provide an automated script to simplify dependency installation. Using the command `make deps`, the script installs both **zlib** and **jemalloc** automatically.
 
 ### Get mm2-plus
 
 ```bash
 git clone https://github.com/at-cg/mm2-plus
 cd mm2-plus
-make all=1
+# build jemalloc and zlib
+make deps 
+# make mm2plus
+make
 
 # test run
 ./mm2plus -cx asm20 test/MT-human.fa test/MT-orang.fa -o out.paf
@@ -51,8 +56,8 @@ The accuracy of `mm2-plus` can be validated against `minimap2` (v2.28). Ensure t
 ```bash
 # Run mm2-plus
 git clone https://github.com/at-cg/mm2plus.git   
-cd mm2-plus && make all=1 
-./mm2plus -ax map-ont test/MT-human.fa test/MT-orang.fa --max-chain-skip=1000000 > mm2-plus.paf
+cd mm2-plus && make deps && make
+./mm2plus -ax map-ont test/MT-human.fa test/MT-orang.fa --max-chain-skip=1000000 > mm2plus.paf
 ```
 
 ```bash
@@ -76,14 +81,14 @@ To compare genome alignments, use the following commands:
 
 ```bash
 git clone https://github.com/at-cg/mm2-plus.git   
-cd mm2-plus && make all=1 
+cd mm2-plus && make deps && make
 ./mm2plus -ax asm20 test/MT-human.fa test/MT-orang.fa > mm2plus.paf
 ```
 
 ```bash
 # Run minimap2
 git clone https://github.com/lh3/minimap2.git -b v2.28
-cd minimap2 && make
+cd minimap2 && make deps && make
 ./minimap2 -ax asm20 test/MT-human.fa test/MT-orang.fa > mm2.paf
 ```
 

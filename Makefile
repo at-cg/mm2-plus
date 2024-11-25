@@ -1,12 +1,25 @@
-CPPFLAGS=	-g -std=c++2a -O3 -w -DHAVE_KALLOC -ljemalloc
-EXTRAFLAGS=
-INCLUDES=
+# Paths to external libraries
+JEMALLOC_DIR := $(CURDIR)/external/jemalloc
+ZLIB_DIR := $(CURDIR)/external/zlib
+
+# URLs for downloading the libraries
+JEMALLOC_URL := https://github.com/jemalloc/jemalloc/releases/download/5.3.0/jemalloc-5.3.0.tar.bz2
+ZLIB_URL := https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz
+
+# List of object files
 OBJS=		src/kthread.o src/kalloc.o src/misc.o src/bseq.o src/sketch.o src/sdust.o src/options.o src/index.o \
 			src/lchain.o src/align.o src/hit.o src/seed.o src/map.o src/format.o src/pe.o src/esterr.o src/splitidx.o \
 			src/ksw2_ll_sse.o src/parallel_sort.o
+# Name of the executable
 PROG=		mm2plus
-PROG_EXTRA=	sdust minimap2-lite
-LIBS=		-fopenmp -lm -lz -lpthread
+# Compiler and linker flags
+CPPFLAGS := -g -std=c++2a -O3 -w -DHAVE_KALLOC -I$(JEMALLOC_DIR)/include -I$(ZLIB_DIR)/include
+LIBS := -Wl,-Bstatic -ljemalloc -lz -Wl,-Bdynamic -fopenmp -lm -lpthread -ldl
+LDFLAGS := -Wl,-L$(JEMALLOC_DIR)/lib -Wl,-L$(ZLIB_DIR)/lib
+
+# Extra flags and includes
+EXTRAFLAGS :=
+INCLUDES :=
 
 ifeq ($(profile),1)
 	CPPFLAGS+=-DPROFILE
@@ -46,7 +59,11 @@ ifeq ($(get_dist),1)
 	CPPFLAGS+=-DGET_DIST -DPAR_CHAIN_1
 endif
 
-ifeq ($(all),1)
+ifeq ($(base),1)
+	all=0
+endif
+
+ifeq ($(all),)
 	CPPFLAGS+=-DPAR_BTK -DPAR_SORT -DPAR_CHAIN_1 -DPAR_DP_CHAIN -DOPT_OLP
 	avx=1
 endif
@@ -95,17 +112,46 @@ all:$(PROG)
 
 extra:all $(PROG_EXTRA)
 
-mm2plus:src/main.o libminimap2.a
-		$(CXX) $(CPPFLAGS) src/main.o -o $@ -L. -lminimap2 $(LIBS)
+mm2plus:src/main.o libminimap2.a 
+		$(CXX) $(CPPFLAGS) src/main.o -o $@ -L. -lminimap2 $(LDFLAGS) $(LIBS)
 
 minimap2-lite:src/example.o libminimap2.a
-		$(CXX) $(CPPFLAGS) $< -o $@ -L. -lminimap2 $(LIBS)
+		$(CXX) $(CPPFLAGS) $< -o $@ -L. -lminimap2 $(LDFLAGS) $(LIBS)
 
 libminimap2.a:$(OBJS)
 		$(AR) -csru $@ $(OBJS)
 
 sdust:src/sdust.c src/kalloc.o src/kalloc.h src/kdq.h src/kvec.h src/kseq.h src/ketopt.h src/sdust.h
 		$(CXX) -D_SDUST_MAIN $(CPPFLAGS) $< src/kalloc.o -o $@ -lz
+
+.PHONY: jemalloc
+jemalloc:
+	@echo "Building jemalloc..."
+	mkdir -p external
+	cd external && \
+	wget $(JEMALLOC_URL) -O jemalloc.tar.bz2 && \
+	tar -xjf jemalloc.tar.bz2 && \
+	cd jemalloc-5.3.0 && \
+	./configure --disable-shared --enable-static --prefix=$(JEMALLOC_DIR) && \
+	make && \
+	make install
+
+# Download and build zlib
+.PHONY: zlib
+zlib:
+	@echo "Building zlib..."
+	mkdir -p external
+	cd external && \
+	wget $(ZLIB_URL) -O zlib.tar.gz && \
+	tar -xzf zlib.tar.gz && \
+	cd zlib-1.3.1 && \
+	./configure --static --prefix=$(ZLIB_DIR) && \
+	make && \
+	make install
+
+# Build dependencies
+.PHONY: deps
+deps: jemalloc zlib
 
 # SSE-specific targets on x86/x86_64
 
@@ -166,8 +212,12 @@ src/ksw2_exts2_neon.o:src/ksw2_exts2_sse.c src/ksw2.h src/kalloc.h
 
 # other non-file targets
 
+# Clean target
+.PHONY: clean clean-deps
 clean:
-		rm -fr gmon.out src/*.o a.out $(PROG) $(PROG_EXTRA) *~ *.a *.dSYM build dist mappy*.so mappy.c python/mappy.c mappy.egg*
+	rm -fr gmon.out src/*.o a.out $(PROG) $(PROG_EXTRA) *~ *.a *.dSYM 
+clean-deps:
+	rm -fr external
 
 depend:
 		(LC_ALL=C; export LC_ALL; makedepend -Y -- $(CPPFLAGS) -- src/*.c)

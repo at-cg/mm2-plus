@@ -4,7 +4,8 @@ set -e  # Exit immediately if a command exits with a non-zero status
 set -o pipefail  # Consider errors in a pipeline
 
 # Build minimap2-hap with avx + par_chain
-cd mm2-plus && make clean && make profile=1 avx=1 opt_olp=1
+cd mm2-plus && make deps  # Install dependencies
+make clean && make profile=1 avx=1 opt_olp=1
 cp mm2plus ../mm2plus_ao
 make clean && make profile=1 avx=1 opt_olp=1 par_chain_1=1
 cp mm2plus ../mm2plus_aoc1
