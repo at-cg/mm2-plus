@@ -57,21 +57,21 @@ The accuracy of `mm2-plus` can be validated against `minimap2` (v2.28). Ensure t
 # Run mm2-plus
 git clone https://github.com/at-cg/mm2plus.git   
 cd mm2-plus && make deps && make
-./mm2plus -ax map-ont test/MT-human.fa test/reads.fq --max-chain-skip=1000000 > mm2plus.paf
+./mm2plus -ax map-ont test/MT-human.fa test/reads.fq --max-chain-skip=1000000 > mm2plus.sam
 ```
 
 ```bash
 # Run minimap2
 git clone https://github.com/lh3/minimap2.git -b v2.28
 cd minimap2 && make
-./minimap2 -ax map-ont test/MT-human.fa test/reads.fq --max-chain-skip=1000000 > mm2.paf
+./minimap2 -ax map-ont test/MT-human.fa test/reads.fq --max-chain-skip=1000000 > mm2.sam
 ```
 
 Compare the outputs:
 
 ```bash
 # Get the difference (skip the line with tools name and version)
-diff <(grep -v '^@PG' mm2.paf) <(grep -v '^@PG' mm2plus.paf)
+diff <(grep -v '^@PG' mm2.sam) <(grep -v '^@PG' mm2plus.sam)
 ```
 
 The `diff` command should return null output, indicating no differences (0 lines).
@@ -83,21 +83,21 @@ To compare genome alignments, use the following commands:
 # Run mm2-plus
 git clone https://github.com/at-cg/mm2-plus.git   
 cd mm2-plus && make deps && make
-./mm2plus -ax asm20 test/MT-human.fa test/MT-orang.fa > mm2plus.paf
+./mm2plus -cx asm20 test/MT-human.fa test/MT-orang.fa > mm2plus.paf
 ```
 
 ```bash
 # Run minimap2
 git clone https://github.com/lh3/minimap2.git -b v2.28
 cd minimap2 && make
-./minimap2 -ax asm20 test/MT-human.fa test/MT-orang.fa > mm2.paf
+./minimap2 -cx asm20 test/MT-human.fa test/MT-orang.fa > mm2.paf
 ```
 
 Compare the outputs:
 
 ```bash
-# Get the difference (skip the line with tools name and version)
-diff <(grep -v '^@PG' mm2.paf) <(grep -v '^@PG' mm2plus.paf)
+# Get the difference
+diff mm2.paf mm2plus.paf
 ```
 
 Both `diff` commands should return null output. For large genomes, there may be negligible differences in the PAF output. Refer to the [paper](#citation) for more information.
