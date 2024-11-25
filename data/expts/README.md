@@ -18,7 +18,6 @@ git clone -b 'v1.0' --single-branch --depth 1 https://github.com/at-cg/mm2-plus.
 git clone -b 'v2.28' --single-branch --depth 1 https://github.com/lh3/minimap2
 # build the tools
 ./make_exec.sh
-cd minimap2 && make && cd ..
 ```
 
 ### 2. Download the Datasets
