@@ -38,7 +38,7 @@ make
 ```
 
 ### Usage
-mm2-plus offers same command line interface as minimap2. Therefore, users can refer to minimap2 [README](#readme_mm2). Here are some test exmaples for mm2-plus run
+mm2-plus offers same command line interface as minimap2. Therefore, users can refer to minimap2 [README](#readme_mm2). Here are some test examples for mm2-plus run
 
 ```bash
 # test read alignment
