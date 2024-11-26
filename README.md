@@ -111,7 +111,7 @@ We observed up to 7x speedup for genome-to-genome alignment across all tested da
   <p><em>Performance comparison of whole-genome alignment between minimap2 and mm2-plus across various datasets, including plant, human, and primate genomes. The experiments were conducted using 48 threads on a Cascade Lake processor.</em></p>
 </div>
 
-The scripts to reproduce the results are available [here](data/expts/README.md)
+The scripts to reproduce the results are available [here](data/expts/)
 
 ### <a name="citation"></a>Citation
 - **Ghanshyam Chandra, Md Vasimuddin, Sanchit Misra and Chirag Jain**. "[Accelerating whole-genome alignment in the age of complete genome assemblies](https://www.biorxiv.org)". *bioRxiv* 2024.
