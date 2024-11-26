@@ -107,7 +107,7 @@ Both `diff` commands should return null output. For large genomes, there may be 
 We observed up to 7x speedup for genome-to-genome alignment across all tested datasets. The speedup for long-read alignment is comparable to that achieved by [mm2-fast](https://github.com/bwa-mem2/mm2-fast). To see a thorough evaluation, please refer to our [paper](#citation).
 
 <div align="center">
-  <img src="data/perf_mm2plus.jpg" alt="Performance comparison between minimap2 and mm2-plus" width="675" />
+  <img src="data/perf_mm2plus.jpg" alt="Performance comparison between minimap2 and mm2-plus" width="800" />
   <p><em>Performance comparison of whole-genome alignment between minimap2 and mm2-plus across various datasets, including plant, human, and primate genomes. The experiments were conducted using 48 threads on a Cascade Lake processor.</em></p>
 </div>
 
