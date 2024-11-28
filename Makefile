@@ -78,6 +78,12 @@ ifeq ($(base),1)
 	all=0
 endif
 
+ifeq ($(all),)
+	CPPFLAGS+=-DPAR_BTK -DPAR_SORT -DPAR_CHAIN_1 -DPAR_DP_CHAIN -DOPT_OLP
+	avx=1
+	base=0
+endif
+
 ifneq ($(aarch64),)
 	arm_neon=1
 	CPPFLAGS := -g -std=c++2a -O3 -w -DHAVE_KALLOC # use external zlib
@@ -87,12 +93,6 @@ else
 		CPPFLAGS+=-DALIGN_AVX -DAPPLY_AVX2
 		all=0
 	endif
-endif
-
-ifeq ($(all),)
-	CPPFLAGS+=-DPAR_BTK -DPAR_SORT -DPAR_CHAIN_1 -DPAR_DP_CHAIN -DOPT_OLP
-	avx=1
-	base=0
 endif
 
 ifeq ($(arm_neon),) # if arm_neon is not defined
