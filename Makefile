@@ -86,7 +86,7 @@ endif
 
 ifneq ($(aarch64),)
 	arm_neon=1
-	CPPFLAGS := -g -std=c++2a -O3 -w -DHAVE_KALLOC # use external zlib
+	CPPFLAGS += -g -std=c++2a -O3 -w -DHAVE_KALLOC # use external zlib
 	LIBS += -fopenmp -lm -lz -lpthread
 else
 	ifeq ($(avx),1)
