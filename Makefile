@@ -78,6 +78,10 @@ ifeq ($(base),1)
 	all=0
 endif
 
+ifeq ($(avx),1)
+	all=0
+endif
+
 ifeq ($(all),)
 	CPPFLAGS+=-DPAR_BTK -DPAR_SORT -DPAR_CHAIN_1 -DPAR_DP_CHAIN -DOPT_OLP
 	avx=1
