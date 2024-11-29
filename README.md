@@ -114,7 +114,7 @@ We observed up to 7x speedup for genome-to-genome alignment across all tested da
 The scripts to reproduce the results are available [here](data/expts/)
 
 ### <a name="citation"></a>Citation
-- **Ghanshyam Chandra, Md Vasimuddin, Sanchit Misra and Chirag Jain**. "[Accelerating whole-genome alignment in the age of complete genome assemblies](https://www.biorxiv.org)". *bioRxiv* 2024.
+- **Ghanshyam Chandra, Md Vasimuddin, Sanchit Misra and Chirag Jain**. "[Accelerating whole-genome alignment in the age of complete genome assemblies](https://www.biorxiv.org/content/10.1101/2024.11.25.625328v1)". *bioRxiv* 2024.
 
 ---
 <a name="readme_mm2"></a> The original README content of minimap2 follows.
