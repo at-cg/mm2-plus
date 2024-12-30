@@ -1,5 +1,6 @@
 [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/at-cg/mm2-plus/total?style=social)](https://github.com/at-cg/mm2-plus/releases)
 [![BioConda Install](https://img.shields.io/conda/dn/bioconda/mm2plus?label=BioConda%20Installs)](https://anaconda.org/bioconda/mm2plus)
+[![Docker](https://quay.io/repository/biocontainers/mm2plus/status)](https://quay.io/repository/biocontainers/mm2plus)
 ## mm2-plus
 
 ### Introduction
