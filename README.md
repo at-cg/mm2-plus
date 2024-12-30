@@ -28,12 +28,19 @@ We provide an automated script to simplify the dependency installation. Assuming
 ### Get mm2-plus
 
 ```bash
+# Build and Install locally
 git clone https://github.com/at-cg/mm2-plus
 cd mm2-plus
 # build jemalloc and zlib
 make deps 
 # make mm2plus
 make
+
+# Install with bioconda
+conda install bioconda::mm2plus
+
+# Install with docker
+docker pull quay.io/biocontainers/mm2plus:1.0--h9ee0642_0
 
 # test run
 ./mm2plus -cx asm20 test/MT-human.fa test/MT-orang.fa > out.paf
