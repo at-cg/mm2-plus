@@ -75,12 +75,12 @@ static ko_longopt_t long_options[] = {
 	{ "splice",         ko_no_argument,       310 },
 	{ "cost-non-gt-ag", ko_required_argument, 'C' },
 	{ "no-long-join",   ko_no_argument,       312 },
-	{ "sr",             ko_no_argument,       313 },
+	{ "sr",             ko_optional_argument, 313 },
 	{ "frag",           ko_required_argument, 314 },
 	{ "secondary",      ko_required_argument, 315 },
 	{ "cs",             ko_optional_argument, 316 },
 	{ "end-bonus",      ko_required_argument, 317 },
-	{ "no-pairing",     ko_no_argument,       318 },
+	{ "no-pairing",     ko_no_argument,       318 }, // deprecated but reserved for backward compatibility
 	{ "splice-flank",   ko_required_argument, 319 },
 	{ "idx-no-seq",     ko_no_argument,       320 },
 	{ "end-seed-pen",   ko_required_argument, 321 },
@@ -119,6 +119,12 @@ static ko_longopt_t long_options[] = {
 	{ "secondary-seq",  ko_no_argument,       354 },
 	{ "ds",             ko_no_argument,       355 },
 	{ "rmq-inner",      ko_required_argument, 356 },
+	{ "spsc",           ko_required_argument, 357 },
+	{ "junc-pen",       ko_required_argument, 358 },
+	{ "pairing",        ko_required_argument, 359 },
+	{ "jump-min-match", ko_required_argument, 360 },
+	{ "write-junc",     ko_no_argument,       361 },
+	{ "pass1",          ko_required_argument, 362 },
 	{ "dbg-seed-occ",   ko_no_argument,       501 },
 	{ "help",           ko_no_argument,       'h' },
 	{ "max-intron-len", ko_required_argument, 'G' },
@@ -171,12 +177,12 @@ int main(int argc, char *argv[])
 
 	// measure time
 	gettimeofday(&start, NULL);
-	const char *opt_str = "2aSDw:k:Z:K:t:r:f:Vv:g:G:I:d:XT:s:x:Hcp:M:n:z:A:B:b:O:E:m:N:Qu:R:hF:LC:yYPo:e:U:J:";
+	const char *opt_str = "2aSDw:k:Z:K:t:r:f:Vv:g:G:I:d:XT:s:x:Hcp:M:n:z:A:B:b:O:E:m:N:Qu:R:hF:LC:yYPo:e:U:J:j:";
 	ketopt_t o = KETOPT_INIT;
 	mm_mapopt_t opt;
 	mm_idxopt_t ipt;
 	int i, c, n_threads = 3, n_parts, old_best_n = -1;
-	char *fnw = 0, *rg = 0, *junc_bed = 0, *s, *alt_list = 0;
+	char *fnw = 0, *rg = 0, *fn_bed_junc = 0, *fn_bed_jump = 0, *fn_bed_pass1 = 0, *fn_spsc = 0, *s, *alt_list = 0;
 	FILE *fp_help = stderr;
 	mm_idx_reader_t *idx_rdr;
 	mm_idx_t *mi;
@@ -193,9 +199,9 @@ int main(int argc, char *argv[])
 			{
 				is_g2g_aln = 1; // enable Genome-to-Genome alignment
 			}
-			if (mm_set_opt(o.arg, &ipt, &opt) == 0 &&  (strcmp(o.arg, "sr") == 0 || strcmp(o.arg, "splice") == 0))
+			if (mm_set_opt(o.arg, &ipt, &opt) == 0 &&  (strcmp(o.arg, "sr") == 0 || strcmp(o.arg, "short") == 0 || strcmp(o.arg, "splice") == 0 || strcmp(o.arg, "splice:hq") == 0 || strcmp(o.arg, "splice:sr") == 0 || strcmp(o.arg, "cdna") == 0))
 			{
-				is_splice_sr = 1; // enable Genome-to-Genome alignment
+				is_splice_sr = 1; // Disable optimized long-read alignment (use default minimap2 code)
 			}
 			if (mm_set_opt(o.arg, &ipt, &opt) < 0) {
 				fprintf(stderr, "[ERROR] unknown preset '%s'\n", o.arg);
@@ -247,6 +253,7 @@ int main(int argc, char *argv[])
 		else if (c == 'R') rg = o.arg;
 		else if (c == 'h') fp_help = stdout;
 		else if (c == '2') opt.flag |= MM_F_2_IO_THREADS;
+		else if (c == 'j') fn_bed_jump = o.arg;
 		else if (c == 'J') {
 			int t;
 			t = atoi(o.arg);
@@ -271,9 +278,8 @@ int main(int argc, char *argv[])
 		else if (c == 309) mm_dbg_flag |= MM_DBG_PRINT_QNAME | MM_DBG_PRINT_ALN_SEQ, n_threads = 1; // --print-aln-seq
 		else if (c == 310) opt.flag |= MM_F_SPLICE; // --splice
 		else if (c == 312) opt.flag |= MM_F_NO_LJOIN; // --no-long-join
-		else if (c == 313) opt.flag |= MM_F_SR; // --sr
 		else if (c == 317) opt.end_bonus = atoi(o.arg); // --end-bonus
-		else if (c == 318) opt.flag |= MM_F_INDEPEND_SEG; // --no-pairing
+		else if (c == 318) opt.flag |= MM_F_INDEPEND_SEG; // --no-pairing (deprecated)
 		else if (c == 320) ipt.flag |= MM_I_NO_SEQ; // --idx-no-seq
 		else if (c == 321) opt.anchor_ext_shift = atoi(o.arg); // --end-seed-pen
 		else if (c == 322) opt.flag |= MM_F_FOR_ONLY; // --for-only
@@ -289,8 +295,9 @@ int main(int argc, char *argv[])
 		else if (c == 336) opt.flag |= MM_F_HARD_MLEVEL; // --hard-mask-level
 		else if (c == 337) opt.max_sw_mat = mm_parse_num(o.arg); // --cap-sw-mat
 		else if (c == 338) opt.max_qlen = mm_parse_num(o.arg); // --max-qlen
-		else if (c == 340) junc_bed = o.arg; // --junc-bed
+		else if (c == 340) fn_bed_junc = o.arg; // --junc-bed
 		else if (c == 341) opt.junc_bonus = atoi(o.arg); // --junc-bonus
+		else if (c == 358) opt.junc_pen = atoi(o.arg); // --junc-pen
 		else if (c == 342) opt.flag |= MM_F_SAM_HIT_ONLY; // --sam-hit-only
 		else if (c == 343) opt.chain_gap_scale = atof(o.arg); // --chain-gap-scale
 		else if (c == 351) opt.chain_skip_scale = atof(o.arg); // --chain-skip-scale
@@ -305,9 +312,24 @@ int main(int argc, char *argv[])
 		else if (c == 354) opt.flag |= MM_F_SECONDARY_SEQ; // --secondary-seq
 		else if (c == 355) opt.flag |= MM_F_OUT_DS; // --ds
 		else if (c == 356) opt.rmq_inner_dist = mm_parse_num(o.arg); // --rmq-inner
+		else if (c == 357) fn_spsc = o.arg; // --spsc
+		else if (c == 360) opt.jump_min_match = mm_parse_num(o.arg); // --jump-min-match
+		else if (c == 361) opt.flag |= MM_F_OUT_JUNC | MM_F_CIGAR; // --write-junc
+		else if (c == 362) fn_bed_pass1 = o.arg; // --jump-pass1
 		else if (c == 501) mm_dbg_flag |= MM_DBG_SEED_FREQ; // --dbg-seed-occ
 		else if (c == 330) {
 			fprintf(stderr, "[WARNING] \033[1;31m --lj-min-ratio has been deprecated.\033[0m\n");
+		} else if (c == 313) { // --sr
+			if (o.arg == 0 || strcmp(o.arg, "dna") == 0) {
+				opt.flag |= MM_F_SR;
+			} else if (strcmp(o.arg, "rna") == 0) {
+				opt.flag |= MM_F_SR_RNA;
+			} else if (strcmp(o.arg, "no") == 0) {
+				opt.flag &= ~(uint64_t)(MM_F_SR|MM_F_SR_RNA);
+			} else if (mm_verbose >= 2) {
+				opt.flag |= MM_F_SR;
+				fprintf(stderr, "[WARNING]\033[1;31m --sr only takes 'dna' or 'rna'. Invalid values are assumed to be 'dna'.\033[0m\n");
+			}
 		} else if (c == 314) { // --frag
 			yes_or_no(&opt, MM_F_FRAG_MODE, o.longidx, o.arg, 1);
 		} else if (c == 315) { // --secondary
@@ -332,6 +354,14 @@ int main(int argc, char *argv[])
 		} else if (c == 347) { // --rmq
 			if (o.arg) yes_or_no(&opt, MM_F_RMQ, o.longidx, o.arg, 1);
 			else opt.flag |= MM_F_RMQ;
+		} else if (c == 359) { // --pairing
+			if (strcmp(o.arg, "no") == 0) opt.flag |= MM_F_INDEPEND_SEG;
+			else if (strcmp(o.arg, "weak") == 0) opt.flag |= MM_F_WEAK_PAIRING, opt.flag &= ~(uint64_t)MM_F_INDEPEND_SEG;
+			else {
+				if (strcmp(o.arg, "strong") != 0 && mm_verbose >= 2)
+					fprintf(stderr, "[WARNING]\033[1;31m unrecognized argument for --pairing; assuming 'strong'.\033[0m\n");
+				opt.flag &= ~(uint64_t)(MM_F_INDEPEND_SEG|MM_F_WEAK_PAIRING);
+			}
 		} else if (c == 'S') {
 			opt.flag |= MM_F_OUT_CS | MM_F_CIGAR | MM_F_OUT_CS_LONG;
 			if (mm_verbose >= 2)
@@ -372,10 +402,6 @@ int main(int argc, char *argv[])
 			if (*s == ',') opt.e2 = strtol(s + 1, &s, 10);
 		}
 	}
-	if ((opt.flag & MM_F_SPLICE) && (opt.flag & MM_F_FRAG_MODE)) {
-		fprintf(stderr, "[ERROR]\033[1;31m --splice and --frag should not be specified at the same time.\033[0m\n");
-		return 1;
-	}
 	if (!fnw && !(opt.flag&MM_F_CIGAR))
 		ipt.flag |= MM_I_NO_SEQ;
 	if (mm_check_opt(&ipt, &opt) < 0)
@@ -415,6 +441,7 @@ int main(int argc, char *argv[])
 		fprintf(fp_help, "    -s INT       minimal peak DP alignment score [%d]\n", opt.min_dp_max);
 		fprintf(fp_help, "    -u CHAR      how to find GT-AG. f:transcript strand, b:both strands, n:don't match GT-AG [n]\n");
 		fprintf(fp_help, "    -J INT       splice mode. 0: original minimap2 model; 1: miniprot model [1]\n");
+		fprintf(fp_help, "    -j FILE      junctions in BED12 to extend *short* RNA-seq alignment []\n");
 		fprintf(fp_help, "  Input/Output:\n");
 		fprintf(fp_help, "    -a           output in the SAM format (PAF by default)\n");
 		fprintf(fp_help, "    -o FILE      output alignments to FILE [stdout]\n");
@@ -426,6 +453,7 @@ int main(int argc, char *argv[])
 		fprintf(fp_help, "    --MD         output the MD tag\n");
 		fprintf(fp_help, "    --eqx        write =/X CIGAR operators\n");
 		fprintf(fp_help, "    -Y           use soft clipping for supplementary alignments\n");
+		fprintf(fp_help, "    -y           copy FASTA/Q comments to output SAM\n");
 		fprintf(fp_help, "    -t INT       number of threads [%d]\n", n_threads);
 		fprintf(fp_help, "    -K NUM       minibatch size for mapping [500M]\n");
 //		fprintf(fp_help, "    -v INT       verbose level [%d]\n", mm_verbose);
@@ -434,6 +462,7 @@ int main(int argc, char *argv[])
 		fprintf(fp_help, "    -x STR       preset (always applied before other options; see minimap2.1 for details) []\n");
 		fprintf(fp_help, "                 - lr:hq - accurate long reads (error rate <1%%) against a reference genome\n");
 		fprintf(fp_help, "                 - splice/splice:hq - spliced alignment for long reads/accurate long reads\n");
+		fprintf(fp_help, "                 - splice:sr - spliced alignment for short RNA-seq reads\n");
 		fprintf(fp_help, "                 - asm5/asm10/asm20 - asm-to-ref mapping, for ~0.1/1/5%% sequence divergence\n");
 		fprintf(fp_help, "                 - sr - short reads against a reference\n");
 		fprintf(fp_help, "                 - map-pb/map-hifi/map-ont/map-iclr - CLR/HiFi/Nanopore/ICLR vs reference mapping\n");
@@ -509,7 +538,26 @@ int main(int argc, char *argv[])
 					__func__, realtime() - mm_realtime0, cputime() / (realtime() - mm_realtime0), mi->n_seq);
 		if (argc != o.ind + 1) mm_mapopt_update(&opt, mi);
 		if (mm_verbose >= 3) mm_idx_stat(mi);
-		if (junc_bed) mm_idx_bed_read(mi, junc_bed, 1);
+		if (fn_bed_junc) {
+			mm_idx_bed_read(mi, fn_bed_junc, 1);
+			if (mi->I == 0 && mm_verbose >= 2)
+				fprintf(stderr, "[WARNING] failed to load the junction BED file\n");
+		}
+		if (fn_bed_jump) {
+			mm_idx_jjump_read(mi, fn_bed_jump, MM_JUNC_ANNO, -1);
+			if (mi->J == 0 && mm_verbose >= 2)
+				fprintf(stderr, "[WARNING] failed to load the jump BED file\n");
+		}
+		if (fn_bed_pass1) {
+			mm_idx_jjump_read(mi, fn_bed_pass1, MM_JUNC_MISC, 5);
+			if (mi->J == 0 && mm_verbose >= 2)
+				fprintf(stderr, "[WARNING] failed to load the pass-1 jump BED file\n");
+		}
+		if (fn_spsc) {
+			mm_idx_spsc_read(mi, fn_spsc, mm_max_spsc_bonus(&opt));
+			if (mi->spsc == 0 && mm_verbose >= 2)
+				fprintf(stderr, "[WARNING] failed to load the splice score file\n");
+		}
 		if (alt_list) mm_idx_alt_read(mi, alt_list);
 		if (argc - (o.ind + 1) == 0) {
 			mm_idx_destroy(mi);

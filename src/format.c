@@ -126,11 +126,11 @@ int mm_write_sam_hdr(const mm_idx_t *idx, const char *rg, const char *ver, int a
 			mm_sprintf_lite(&str, "@SQ\tSN:%s\tLN:%d\n", idx->seq[i].name, idx->seq[i].len);
 	}
 	if (rg) ret = sam_write_rg_line(&str, rg);
-	mm_sprintf_lite(&str, "@PG\tID:minimap2\tPN:minimap2");
+	mm_sprintf_lite(&str, "@PG\tID:mm2plus\tPN:mm2plus");
 	if (ver) mm_sprintf_lite(&str, "\tVN:%s", ver);
 	if (argc > 1) {
 		int i;
-		mm_sprintf_lite(&str, "\tCL:minimap2");
+		mm_sprintf_lite(&str, "\tCL:mm2plus");
 		for (i = 1; i < argc; ++i)
 			mm_sprintf_lite(&str, " %s", argv[i]);
 	}
@@ -253,6 +253,52 @@ static void write_cs_ds_core(kstring_t *s, const uint8_t *tseq, const uint8_t *q
 	assert(t_off == r->re - r->rs && q_off == r->qe - r->qs);
 }
 
+static inline void revcomp_splice(uint8_t s[2])
+{
+	uint8_t c = s[1] < 4? 3 - s[1] : 4;
+	s[1] = s[0] < 4? 3 - s[0] : 4;
+	s[0] = c;
+}
+
+void mm_write_junc(kstring_t *s, const mm_idx_t *mi, const mm_bseq1_t *t, const mm_reg1_t *r)
+{
+	int32_t i, t_off, swritten = 0;
+	s->l = 0;
+	if (!r->is_spliced || r->p == 0) return; // no junctions
+	if (r->p->trans_strand != 1 && r->p->trans_strand != 2) return; // no preferred strand
+	for (i = 0, t_off = r->rs; i < (int)r->p->n_cigar; ++i) {
+		int op = r->p->cigar[i]&0xf, len = r->p->cigar[i]>>4;
+		if (op == MM_CIGAR_MATCH || op == MM_CIGAR_EQ_MATCH || op == MM_CIGAR_X_MISMATCH || op == MM_CIGAR_DEL) {
+			t_off += len;
+		} else if (op == MM_CIGAR_N_SKIP) { // intron
+			uint8_t donor[2], acceptor[2];
+			int32_t score1 = 0, score2 = 0, rev;
+			assert(len >= 2);
+			rev = (r->p->trans_strand == 2) ^ r->rev;
+			if (!rev) {
+				mm_idx_getseq(mi, r->rid, t_off, t_off + 2, donor);
+				mm_idx_getseq(mi, r->rid, t_off + len - 2, t_off + len, acceptor);
+			} else {
+				mm_idx_getseq(mi, r->rid, t_off, t_off + 2, acceptor);
+				mm_idx_getseq(mi, r->rid, t_off + len - 2, t_off + len, donor);
+				revcomp_splice(donor);
+				revcomp_splice(acceptor);
+			}
+			//fprintf(stderr, "%c%c-%c%c\n", "ACGTN"[donor[0]], "ACGTN"[donor[1]], "ACGTN"[acceptor[0]], "ACGTN"[acceptor[1]]);
+			if (donor[0] == 2 && donor[1] == 3) score1 = 3;
+			else if (donor[0] == 2 && donor[1] == 1) score1 = 2;
+			else if (donor[0] == 0 && donor[1] == 3) score1 = 1;
+			if (acceptor[0] == 0 && acceptor[1] == 2) score2 = 3;
+			else if (acceptor[0] == 0 && acceptor[1] == 1) score2 = 1;
+			if (swritten) mm_sprintf_lite(s, "\n");
+			else swritten = 1;
+			mm_sprintf_lite(s, "%s\t%d\t%d\t%s\t%d\t%c", mi->seq[r->rid].name, t_off, t_off + len, t->name, score1 + score2, "+-"[rev]);
+			t_off += len;
+		}
+	}
+	assert(t_off == r->re);
+}
+
 static void write_MD_core(kstring_t *s, const uint8_t *tseq, const uint8_t *qseq, const mm_reg1_t *r, char *tmp, int write_tag)
 {
 	int i, q_off, t_off, l_MD = 0;
@@ -366,15 +412,18 @@ static inline void write_tags(kstring_t *s, const mm_reg1_t *r)
 	if (r->split) mm_sprintf_lite(s, "\tzd:i:%d", r->split);
 }
 
-void mm_write_paf3(kstring_t *s, const mm_idx_t *mi, const mm_bseq1_t *t, const mm_reg1_t *r, void *km, int64_t opt_flag, int rep_len)
+void mm_write_paf4(kstring_t *s, const mm_idx_t *mi, const mm_bseq1_t *t, const mm_reg1_t *r, void *km, int64_t opt_flag, int rep_len, int n_seg, int seg_idx)
 {
 	s->l = 0;
+	mm_sprintf_lite(s, "%s", t->name);
+	if ((opt_flag & MM_F_FRAG_MODE) && n_seg >= 2 && seg_idx >= 0)
+		mm_sprintf_lite(s, "/%d", seg_idx + 1);
 	if (r == 0) {
-		mm_sprintf_lite(s, "%s\t%d\t0\t0\t*\t*\t0\t0\t0\t0\t0\t0", t->name, t->l_seq);
+		mm_sprintf_lite(s, "\t%d\t0\t0\t*\t*\t0\t0\t0\t0\t0\t0", t->l_seq);
 		if (rep_len >= 0) mm_sprintf_lite(s, "\trl:i:%d", rep_len);
 		return;
 	}
-	mm_sprintf_lite(s, "%s\t%d\t%d\t%d\t%c\t", t->name, t->l_seq, r->qs, r->qe, "+-"[r->rev]);
+	mm_sprintf_lite(s, "\t%d\t%d\t%d\t%c\t", t->l_seq, r->qs, r->qe, "+-"[r->rev]);
 	if (mi->seq[r->rid].name) mm_sprintf_lite(s, "%s", mi->seq[r->rid].name);
 	else mm_sprintf_lite(s, "%d", r->rid);
 	mm_sprintf_lite(s, "\t%d", mi->seq[r->rid].len);
@@ -396,6 +445,11 @@ void mm_write_paf3(kstring_t *s, const mm_idx_t *mi, const mm_bseq1_t *t, const 
 		write_cs_ds_or_MD(km, s, mi, t, r, !(opt_flag&MM_F_OUT_CS_LONG), !!(opt_flag&MM_F_OUT_MD), !!(opt_flag&MM_F_OUT_DS), 1, !!(opt_flag&MM_F_QSTRAND));
 	if ((opt_flag & MM_F_COPY_COMMENT) && t->comment)
 		mm_sprintf_lite(s, "\t%s", t->comment);
+}
+
+void mm_write_paf3(kstring_t *s, const mm_idx_t *mi, const mm_bseq1_t *t, const mm_reg1_t *r, void *km, int64_t opt_flag, int rep_len)
+{
+	mm_write_paf4(s, mi, t, r, km, opt_flag, rep_len, 0, 0);
 }
 
 void mm_write_paf(kstring_t *s, const mm_idx_t *mi, const mm_bseq1_t *t, const mm_reg1_t *r, void *km, int64_t opt_flag)

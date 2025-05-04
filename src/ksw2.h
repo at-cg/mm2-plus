@@ -15,7 +15,8 @@
 #define KSW_EZ_SPLICE_FOR  0x100
 #define KSW_EZ_SPLICE_REV  0x200
 #define KSW_EZ_SPLICE_FLANK 0x400
-#define KSW_EZ_SPLICE_CMPLX 0x800
+#define KSW_EZ_SPLICE_CMPLX 0x800  // use the miniprot splice model
+#define KSW_EZ_SPLICE_SCORE 0x1000 // use splice score
 
 // The subset of CIGAR operators used by ksw code.
 // Use MM_CIGAR_* from minimap.h if you need the full list.
@@ -23,6 +24,8 @@
 #define KSW_CIGAR_INS    1
 #define KSW_CIGAR_DEL    2
 #define KSW_CIGAR_N_SKIP 3
+
+#define KSW_SPSC_OFFSET  64
 
 #ifdef __cplusplus
 extern "C" {
@@ -69,7 +72,7 @@ void ksw_extd2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uin
 				   int8_t gapo, int8_t gape, int8_t gapo2, int8_t gape2, int w, int zdrop, int end_bonus, int flag, ksw_extz_t *ez);
 
 void ksw_exts2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t m, const int8_t *mat,
-				   int8_t gapo, int8_t gape, int8_t gapo2, int8_t noncan, int zdrop, int8_t junc_bonus, int flag, const uint8_t *junc, ksw_extz_t *ez);
+				   int8_t gapo, int8_t gape, int8_t gapo2, int8_t noncan, int zdrop, int end_bonus, int8_t junc_bonus, int8_t junc_pen, int flag, const uint8_t *junc, ksw_extz_t *ez);
 
 void ksw_extf2_sse(void *km, int qlen, const uint8_t *query, int tlen, const uint8_t *target, int8_t mch, int8_t mis, int8_t e, int w, int xdrop, ksw_extz_t *ez);
 

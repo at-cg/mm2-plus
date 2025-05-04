@@ -1,4 +1,4 @@
-.TH minimap2 1 "12 March 2024" "minimap2-2.28 (r1209)" "Bioinformatics tools"
+.TH minimap2 1 "18 April 2025" "minimap2-2.29 (r1283)" "Bioinformatics tools"
 .SH NAME
 .PP
 minimap2 - mapping and alignment between collections of DNA sequences
@@ -79,19 +79,6 @@ Minimizer k-mer length [15]
 .BI -w \ INT
 Minimizer window size [10]. A minimizer is the smallest k-mer
 in a window of w consecutive k-mers.
-.TP
-.BI -j \ INT
-Syncmer submer size [10]. Option
-.B -j
-and
-.B -w
-will override each: if
-.B -w
-is applied after
-.BR -j ,
-.B -j
-will have no effect, and vice versa.
-
 .TP
 .B -H
 Use homopolymer-compressed (HPC) minimizers. An HPC sequence is constructed by
@@ -310,11 +297,13 @@ maximum alignment gap is mostly controlled by
 .B --splice
 Enable the splice alignment mode.
 .TP
-.B --sr
-Enable short-read alignment heuristics. In the short-read mode, minimap2
-applies a second round of chaining with a higher minimizer occurrence threshold
-if no good chain is found. In addition, minimap2 attempts to patch gaps between
-seeds with ungapped alignment.
+.BR --sr [= no | dna | rna ]
+Enable short-read alignment heuristics [no]. If this option is used with no argument,
+.RB ` dna '
+is set. In the DNA short-read mode, minimap2 applies a second round of chaining
+with a higher minimizer occurrence threshold if no good chain is found. In
+addition, minimap2 attempts to patch gaps between seeds with ungapped
+alignment.
 .TP
 .BI --split-prefix \ STR
 Prefix to create temporary files. Typically used for a multi-part index.
@@ -333,10 +322,6 @@ Only map to the reverse complement strand of the reference sequences.
 .BR --heap-sort = no | yes
 If yes, sort anchors with heap merge, instead of radix sort. Heap merge is
 faster for short reads, but slower for long reads. [no]
-.TP
-.B --no-pairing
-Treat two reads in a pair as independent reads. The mate related fields in SAM
-are still properly populated.
 .TP
 .B --no-hash-name
 Produce the same alignment for identical sequences regardless of their sequence names.
@@ -371,7 +356,16 @@ Splice model [1]. 0 for the original minimap2 splice model that always penalizes
 .B -C
 has no effect with the default
 .BR -J1 .
-.BR -J0 .
+.TP
+.BR -j \ FILE
+Junctions used to extend alignment towards ends of reads [].
+.I FILE
+can be gene annotations in the BED12 format (aka 12-column BED), or intron
+positions in 5-column BED with the strand column required. BED12 file can be
+converted from GTF/GFF3 with `paftools.js gff2bed anno.gtf'. This option is
+intended for short RNA-seq reads, while
+.B --junc-bed
+for long noisy RNA-seq reads.
 .TP
 .BI -C \ INT
 Cost for a non-canonical GT-AG splicing (effective with
@@ -414,7 +408,16 @@ no attempt to match GT-AG [n]
 Score bonus when alignment extends to the end of the query sequence [0].
 .TP
 .BI --score-N \ INT
-Score of a mismatch involving ambiguous bases [1].
+Penalty of a mismatch involving ambiguous bases [1].
+.TP
+.BR --pairing = strong | weak | no
+How to pair paired-end reads [strong].
+.RB ` no '
+for aligning the two ends in a pair independently with no `properly paired' set.
+.RB ` weak '
+for aligning the two ends independently and then pairing the hits.
+.RB ` strong '
+for jointly aligning and pairing the two ends.
 .TP
 .BR --splice-flank = yes | no
 Assume the next base to a
@@ -433,16 +436,40 @@ on SIRV data, please add
 .B --splice-flank=no
 to the command line.
 .TP
+.BR --spsc \ FILE
+Splice scores []. Each line consists of five fields: 1) contig, 2) offset, 3) `+' or `-', 4) `D' or `A', and 5) score,
+where offset is the number of bases before a splice junction, `D' indicates the
+line corresponds to a donor site and `A' for an acceptor site.
+A positive score suggests the junction is preferred and a negative score
+suggests the junction is not preferred.
+.TP
+.BR --junc-pen \ INT
+Penalty for a position not in FILE specified by
+.B --spsc
+[5]. Effective with
+.B --spsc
+but not
+.BR --junc-bed .
+.TP
 .BR --junc-bed \ FILE
-Gene annotations in the BED12 format (aka 12-column BED), or intron positions
-in 5-column BED. With this option, minimap2 prefers splicing in annotations.
-BED12 file can be converted from GTF/GFF3 with `paftools.js gff2bed anno.gtf'
-[].
+Junctions to prefer during base alignment [].
+Same format as
+.BR -j .
+It is
+.I NOT
+recommended to apply this option to short RNA-seq reads. This would increase
+run time with little improvement to junction accuracy.
 .TP
 .BR --junc-bonus \ INT
-Score bonus for a splice donor or acceptor found in annotation (effective with
-.BR --junc-bed )
-[9].
+Score bonus for a splice donor or acceptor found in annotation [9]. Effective with
+.B --junc-bed
+but not
+.BR --spsc .
+.TP
+.BR --jump-min-match \ INT
+Minimum matching length to create a jump [3]. Equivalent to
+.B STAR
+.BR --alignSJDBoverhangMin .
 .TP
 .BI --end-seed-pen \ INT
 Drop a terminal anchor if
@@ -500,20 +527,13 @@ Copy input FASTA/Q comments to output.
 .B -c
 Generate CIGAR. In PAF, the CIGAR is written to the `cg' custom tag.
 .TP
-.BI --cs[= STR ]
+.BR --cs [= short | long ]
 Output the
 .B cs
 tag.
-.I STR
-can be either
-.I short
-or
-.IR long .
-If no
-.I STR
-is given,
-.I short
-is assumed. [none]
+If no argument is given,
+.RB ` short '
+is set. [none]
 .TP
 .B --MD
 Output the MD tag (see the SAM spec).
@@ -526,6 +546,26 @@ In SAM output, use soft clipping for supplementary alignments.
 .TP
 .B --secondary-seq
 In SAM output, show query sequences for secondary alignments.
+.TP
+.B --write-junc
+Output splice junctions in 6-column BED: contig name, start, end,
+read name, score and strand. Score is the sum of donor and acceptor scores,
+where GT gets 3, GC gets 2 and AT gets 1 at donor sites,
+while AG gets 3 and AC gets 1 at acceptor sites.
+Alignments with mapping quality below 10 are ignored.
+.TP
+.BI --pass1 \ FILE
+Junctions BED file outputted by
+.B --write-junc
+[]. Rows with scores lower than 5 are ignored. When both
+.B -j
+and
+.B --pass1
+are present, junctions in
+.B -j
+are preferred over in
+.BR --pass1
+when there is ambiguity.
 .TP
 .BI --seed \ INT
 Integer seed for randomizing equally best hits. Minimap2 hashes
@@ -666,10 +706,16 @@ Spliced alignment for accurate long RNA-seq reads such as PacBio iso-seq
 .B -C5 -O6,24
 .BR -B4 ).
 .TP
+.B splice:sr
+Spliced alignment for short RNA-seq reads
+.RB ( -xsplice:hq
+.B --frag=yes -m25 -s40 -2K100m --heap-sort=yes --pairing=weak --sr=rna --min-dp-len=20
+.BR --secondary=no ).
+.TP
 .B sr
 Short-read alignment without splicing
 .RB ( -k21
-.B -w11 --sr --frag=yes -A2 -B8 -O12,32 -E2,1 -b0 -r100 -p.5 -N20 -f1000,5000 -n2 -m25
+.B -w11 --sr --frag=yes -A2 -B8 -O12,32 -E2,1 -r100 -p.5 -N20 -f1000,5000 -n2 -m25
 .B -s40 -g100 -2K50m --heap-sort=yes
 .BR --secondary=no ).
 .TP
@@ -742,7 +788,7 @@ s2	i	Chaining score of the best secondary chain
 NM	i	Total number of mismatches and gaps in the alignment
 MD	Z	To generate the ref sequence in the alignment
 AS	i	DP alignment score
-SA	Z	List of other supplementary alignments
+SA	Z	List of other supplementary alignments (with approximate CIGAR strings)
 ms	i	DP score of the max scoring segment in the alignment
 nn	i	Number of ambiguous bases in the alignment
 ts	A	Transcript strand (splice mode only)
@@ -751,6 +797,7 @@ cs	Z	Difference string
 dv	f	Approximate per-base sequence divergence
 de	f	Gap-compressed per-base sequence divergence
 rl	i	Length of query regions harboring repetitive seeds
+zd	i	Alignment broken due to Z-drop; bit 1: left broken; bit 2: right broken
 .TE
 
 .PP

@@ -62,6 +62,8 @@ void mm_mapopt_init(mm_mapopt_t *opt)
 
 	opt->pe_ori = 0; // FF
 	opt->pe_bonus = 33;
+
+	opt->jump_min_match = 3;
 }
 
 void mm_mapopt_update(mm_mapopt_t *opt, const mm_idx_t *mi)
@@ -164,7 +166,7 @@ int mm_set_opt(const char *preset, mm_idxopt_t *io, mm_mapopt_t *mo)
 		mo->mid_occ = 1000;
 		mo->max_occ = 5000;
 		mo->mini_batch_size = 50000000;
-	} else if (strncmp(preset, "splice", 6) == 0 || strcmp(preset, "cdna") == 0) {
+	} else if (strcmp(preset, "splice") == 0 || strcmp(preset, "splice:hq") == 0 || strcmp(preset, "splice:sr") == 0 || strcmp(preset, "cdna") == 0) {
 		io->flag = 0, io->k = 15, io->w = 5;
 		mo->flag |= MM_F_SPLICE | MM_F_SPLICE_FOR | MM_F_SPLICE_REV | MM_F_SPLICE_FLANK;
 		mo->max_sw_mat = 0;
@@ -172,11 +174,29 @@ int mm_set_opt(const char *preset, mm_idxopt_t *io, mm_mapopt_t *mo)
 		mo->a = 1, mo->b = 2, mo->q = 2, mo->e = 1, mo->q2 = 32, mo->e2 = 0;
 		mo->noncan = 9;
 		mo->junc_bonus = 9;
+		mo->junc_pen = 5;
 		mo->zdrop = 200, mo->zdrop_inv = 100; // because mo->a is halved
-		if (strcmp(preset, "splice:hq") == 0)
+		if (strcmp(preset, "splice:hq") == 0) {
 			mo->noncan = 5, mo->b = 4, mo->q = 6, mo->q2 = 24;
+		} else if (strcmp(preset, "splice:sr") == 0) {
+			mo->flag |= MM_F_NO_PRINT_2ND | MM_F_2_IO_THREADS | MM_F_HEAP_SORT | MM_F_FRAG_MODE | MM_F_WEAK_PAIRING | MM_F_SR_RNA;
+			mo->noncan = 5, mo->b = 4, mo->q = 6, mo->q2 = 24;
+			mo->min_chain_score = 25;
+			mo->min_dp_max = 40;
+			mo->min_ksw_len = 20;
+			mo->pe_ori = 0<<1|1; // FR
+			mo->best_n = 10;
+			mo->mini_batch_size = 100000000;
+		}
 	} else return -1;
 	return 0;
+}
+
+int mm_max_spsc_bonus(const mm_mapopt_t *mo)
+{
+	int max_sc = (mo->q2 + 1) / 2 - 1;
+	max_sc = max_sc > mo->q2 - mo->q? max_sc : mo->q2 - mo->q;
+	return max_sc;
 }
 
 int mm_check_opt(const mm_idxopt_t *io, const mm_mapopt_t *mo)
@@ -231,6 +251,11 @@ int mm_check_opt(const mm_idxopt_t *io, const mm_mapopt_t *mo)
 	if ((mo->q + mo->e) + (mo->q2 + mo->e2) > 127) {
 		if (mm_verbose >= 1)
 			fprintf(stderr, "[ERROR]\033[1;31m scoring system violating ({-O}+{-E})+({-O2}+{-E2}) <= 127\033[0m\n");
+		return -1;
+	}
+	if (mo->sc_ambi < 0 || mo->sc_ambi >= mo->b) {
+		if (mm_verbose >= 1)
+			fprintf(stderr, "[ERROR]\033[1;31m --score-N should be within [0,{-B})\033[0m\n");
 		return -1;
 	}
 	if (mo->zdrop < mo->zdrop_inv) {

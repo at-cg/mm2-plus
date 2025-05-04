@@ -12,6 +12,7 @@
 #include "bseq.h"
 #include "minimap.h"
 #include "mmpriv.h"
+#include "ksw2.h"
 #include "kvec.h"
 #include "khash.h"
 
@@ -32,7 +33,7 @@ typedef struct mm_idx_bucket_s {
 } mm_idx_bucket_t;
 
 typedef struct {
-	int32_t st, en, max; // max is not used for now
+	int32_t st, en, cnt;
 	int32_t score:30, strand:2;
 } mm_idx_intv1_t;
 
@@ -40,6 +41,11 @@ typedef struct mm_idx_intv_s {
 	int32_t n, m;
 	mm_idx_intv1_t *a;
 } mm_idx_intv_t;
+
+typedef struct mm_idx_jjump_s {
+	int32_t n, m;
+	mm_idx_jjump1_t *a;
+} mm_idx_jjump_t;
 
 mm_idx_t *mm_idx_init(int w, int k, int b, int flag)
 {
@@ -65,10 +71,16 @@ void mm_idx_destroy(mm_idx_t *mi)
 			kh_destroy(idx, (idxhash_t*)mi->B[i].h);
 		}
 	}
+	if (mi->spsc) free(mi->spsc);
 	if (mi->I) {
 		for (i = 0; i < mi->n_seq; ++i)
 			free(mi->I[i].a);
 		free(mi->I);
+	}
+	if (mi->J) {
+		for (i = 0; i < mi->n_seq; ++i)
+			free(mi->J[i].a);
+		free(mi->J);
 	}
 	if (!mi->km) {
 		for (i = 0; i < mi->n_seq; ++i)
@@ -99,7 +111,7 @@ const uint64_t *mm_idx_get(const mm_idx_t *mi, uint64_t minier, int *n)
 
 void mm_idx_stat(const mm_idx_t *mi)
 {
-	int n = 0, n1 = 0;
+	int64_t n = 0, n1 = 0;
 	uint32_t i;
 	uint64_t sum = 0, len = 0;
 	fprintf(stderr, "[M::%s] kmer size: %d; skip: %d; is_hpc: %d; #seq: %d\n", __func__, mi->k, mi->w, mi->flag&MM_I_HPC, mi->n_seq);
@@ -117,8 +129,8 @@ void mm_idx_stat(const mm_idx_t *mi)
 				if (kh_key(h, k)&1) ++n1;
 			}
 	}
-	fprintf(stderr, "[M::%s::%.3f*%.2f] distinct minimizers: %d (%.2f%% are singletons); average occurrences: %.3lf; average spacing: %.3lf; total length: %ld\n",
-			__func__, realtime() - mm_realtime0, cputime() / (realtime() - mm_realtime0), n, 100.0*n1/n, (double)sum / n, (double)len / sum, (long)len);
+	fprintf(stderr, "[M::%s::%.3f*%.2f] distinct minimizers: %ld (%.2f%% are singletons); average occurrences: %.3lf; average spacing: %.3lf; total length: %ld\n",
+			__func__, realtime() - mm_realtime0, cputime() / (realtime() - mm_realtime0), (long)n, 100.0*n1/n, (double)sum / n, (double)len / sum, (long)len);
 }
 
 int mm_idx_index_name(mm_idx_t *mi)
@@ -661,7 +673,10 @@ int mm_idx_alt_read(mm_idx_t *mi, const char *fn)
 #define sort_key_bed(a) ((a).st)
 KRADIX_SORT_INIT(bed, mm_idx_intv1_t, sort_key_bed, 4)
 
-mm_idx_intv_t *mm_idx_read_bed(const mm_idx_t *mi, const char *fn, int read_junc)
+#define sort_key_end(a) ((a).en)
+KRADIX_SORT_INIT(end, mm_idx_intv1_t, sort_key_end, 4)
+
+static mm_idx_intv_t *mm_idx_bed_read_core(const mm_idx_t *mi, const char *fn, int read_junc, int min_sc)
 {
 	gzFile fp;
 	kstream_t *ks;
@@ -670,7 +685,7 @@ mm_idx_intv_t *mm_idx_read_bed(const mm_idx_t *mi, const char *fn, int read_junc
 
 	fp = fn && strcmp(fn, "-")? gzopen(fn, "r") : gzdopen(fileno(stdin), "r");
 	if (fp == 0) return 0;
-	I = (mm_idx_intv_t*)calloc(mi->n_seq, sizeof(*I));
+	I = CALLOC(mm_idx_intv_t, mi->n_seq);
 	ks = ks_init(fp);
 	while (ks_getuntil(ks, KS_SEP_LINE, &str, 0) >= 0) {
 		mm_idx_intv_t *r;
@@ -691,7 +706,7 @@ mm_idx_intv_t *mm_idx_read_bed(const mm_idx_t *mi, const char *fn, int read_junc
 					t.en = atol(q);
 					if (t.en < 0) break;
 				} else if (i == 4) { // BED score
-					t.score = atol(q);
+					t.score = *q >= '0' && *q <= '9'? atol(q) : -1;
 				} else if (i == 5) { // strand
 					t.strand = *q == '+'? 1 : *q == '-'? -1 : 0;
 				} else if (i == 9) {
@@ -707,7 +722,8 @@ mm_idx_intv_t *mm_idx_read_bed(const mm_idx_t *mi, const char *fn, int read_junc
 				++i, q = p + 1;
 			}
 		}
-		if (id < 0 || t.st < 0 || t.st >= t.en) continue;
+		if (id < 0 || t.st < 0 || t.st >= t.en) continue; // contig ID not found, or other problems
+		if (min_sc > 0 && t.score < min_sc) continue;
 		r = &I[id];
 		if (i >= 11 && read_junc) { // BED12
 			int32_t st, sz, en;
@@ -740,14 +756,44 @@ mm_idx_intv_t *mm_idx_read_bed(const mm_idx_t *mi, const char *fn, int read_junc
 	return I;
 }
 
+static mm_idx_intv_t *mm_idx_bed_read_merge(const mm_idx_t *mi, const char *fn, int read_junc, int min_sc)
+{
+	long n = 0, n0 = 0;
+	int32_t i;
+	mm_idx_intv_t *I;
+	I = mm_idx_bed_read_core(mi, fn, read_junc, min_sc);
+	if (I == 0) return 0;
+	for (i = 0; i < mi->n_seq; ++i) {
+		int32_t j, j0, k;
+		mm_idx_intv_t *intv = &I[i];
+		n0 += intv->n;
+		radix_sort_bed(intv->a, intv->a + intv->n); // sort by st
+		for (j = 1, j0 = 0; j <= intv->n; ++j) { // sort by st and then by end
+			if (j == intv->n || intv->a[j].st != intv->a[j0].st) {
+				radix_sort_end(intv->a + j0, intv->a + j);
+				j0 = j;
+			}
+		}
+		for (j = 1, j0 = 0, k = 0; j <= intv->n; ++j) { // merge intervals with the same (st, en)
+			if (j == intv->n || intv->a[j].st != intv->a[j0].st || intv->a[j].en != intv->a[j0].en) {
+				intv->a[k] = intv->a[j0];
+				intv->a[k++].cnt = j - j0;
+				j0 = j;
+			}
+		}
+		intv->a = REALLOC(mm_idx_intv1_t, intv->a, k);
+		intv->n = intv->m = k;
+		n += k;
+	}
+	if (mm_verbose >= 3)
+		fprintf(stderr, "[%s] read %ld introns, %ld of which are non-redundant\n", __func__, n0, n);
+	return I;
+}
+
 int mm_idx_bed_read(mm_idx_t *mi, const char *fn, int read_junc)
 {
-	int32_t i;
 	if (mi->h == 0) mm_idx_index_name(mi);
-	mi->I = mm_idx_read_bed(mi, fn, read_junc);
-	if (mi->I == 0) return -1;
-	for (i = 0; i < mi->n_seq; ++i) // TODO: eliminate redundant intervals
-		radix_sort_bed(mi->I[i].a, mi->I[i].a + mi->I[i].n);
+	mi->I = mm_idx_bed_read_merge(mi, fn, read_junc, -1);
 	return 0;
 }
 
@@ -775,3 +821,244 @@ int mm_idx_bed_junc(const mm_idx_t *mi, int32_t ctg, int32_t st, int32_t en, uin
 	}
 	return left;
 }
+
+/*********************************
+ * Reading junctions for jumping *
+ *********************************/
+
+ #define sort_key_jj(a) ((a).off)
+ KRADIX_SORT_INIT(jj, mm_idx_jjump1_t, sort_key_jj, 4)
+ 
+ #define sort_key_jj2(a) ((a).off2)
+ KRADIX_SORT_INIT(jj2, mm_idx_jjump1_t, sort_key_jj2, 4)
+ 
+ static void sort_jjump(mm_idx_jjump_t *jj2)
+ {
+	 int32_t j0, j, k;
+	 if (jj2 == 0 || jj2->n == 0) return;
+	 radix_sort_jj(jj2->a, jj2->a + jj2->n);
+	 for (j0 = 0, j = 1; j <= jj2->n; ++j) {
+		 if (j == jj2->n || jj2->a[j0].off != jj2->a[j].off) {
+			 radix_sort_jj2(jj2->a + j0, jj2->a + j);
+			 j0 = j;
+		 }
+	 }
+	 // the actual merge
+	 for (j0 = 0, j = 1, k = 0; j <= jj2->n; ++j) {
+		 if (j == jj2->n || jj2->a[j0].off != jj2->a[j].off || jj2->a[j0].off2 != jj2->a[j].off2) {
+			 int32_t t, cnt = 0;
+			 uint16_t flag = 0;
+			 for (t = j0; t < j; ++t) cnt += jj2->a[t].cnt, flag |= jj2->a[t].flag;
+			 jj2->a[k] = jj2->a[j0];
+			 jj2->a[k].cnt = cnt;
+			 jj2->a[k++].flag = flag;
+			 j0 = j;
+		 }
+	 }
+	 jj2->n = k;
+	 jj2->a = REALLOC(mm_idx_jjump1_t, jj2->a, k);
+ }
+ 
+ static mm_idx_jjump_t *mm_idx_bed2jjump(const mm_idx_t *mi, const mm_idx_intv_t *I, uint16_t flag)
+ {
+	 int32_t i;
+	 mm_idx_jjump_t *J;
+	 J = CALLOC(mm_idx_jjump_t, mi->n_seq);
+	 for (i = 0; i < mi->n_seq; ++i) {
+		 int32_t j, k;
+		 const mm_idx_intv_t *intv = &I[i];
+		 mm_idx_jjump_t *jj = &J[i];
+		 jj->n = intv->n * 2;
+		 jj->a = CALLOC(mm_idx_jjump1_t, jj->n);
+		 for (j = k = 0; j < intv->n; ++j) {
+			 jj->a[k].off = intv->a[j].st, jj->a[k].off2 = intv->a[j].en, jj->a[k].cnt = intv->a[j].cnt, jj->a[k].strand = intv->a[j].strand, jj->a[k++].flag = flag;
+			 jj->a[k].off = intv->a[j].en, jj->a[k].off2 = intv->a[j].st, jj->a[k].cnt = intv->a[j].cnt, jj->a[k].strand = intv->a[j].strand, jj->a[k++].flag = flag;
+		 }
+		 sort_jjump(jj);
+	 }
+	 return J;
+ }
+ 
+ static mm_idx_jjump_t *mm_idx_jjump_merge(const mm_idx_t *mi, const mm_idx_jjump_t *J0, const mm_idx_jjump_t *J1)
+ {
+	 int32_t i;
+	 mm_idx_jjump_t *J2;
+	 J2 = CALLOC(mm_idx_jjump_t, mi->n_seq);
+	 for (i = 0; i < mi->n_seq; ++i) {
+		 int32_t j, k;
+		 const mm_idx_jjump_t *jj0 = &J0[i], *jj1 = &J1[i];
+		 mm_idx_jjump_t *jj2 = &J2[i];
+		 jj2->n = jj0->n + jj1->n;
+		 jj2->a = CALLOC(mm_idx_jjump1_t, jj2->n);
+		 for (j = k = 0; j < jj0->n; ++j) jj2->a[k++] = jj0->a[j];
+		 for (j = 0; j < jj1->n; ++j) jj2->a[k++] = jj1->a[j];
+		 sort_jjump(jj2);
+	 }
+	 return J2;
+ }
+ 
+ int mm_idx_jjump_read(mm_idx_t *mi, const char *fn, int flag, int min_sc)
+ {
+	 int32_t i, j, n_anno = 0, n_misc = 0;
+	 mm_idx_intv_t *I;
+	 mm_idx_jjump_t *J;
+	 if (mi->h == 0) mm_idx_index_name(mi);
+	 I = mm_idx_bed_read_merge(mi, fn, 1, min_sc);
+	 J = mm_idx_bed2jjump(mi, I, flag);
+	 for (i = 0; i < mi->n_seq; ++i) free(I[i].a);
+	 free(I);
+	 if (mi->J) {
+		 mm_idx_jjump_t *J2;
+		 J2 = mm_idx_jjump_merge(mi, mi->J, J);
+		 for (i = 0; i < mi->n_seq; ++i) {
+			 free(mi->J[i].a); free(J[i].a);
+		 }
+		 free(mi->J); free(J);
+		 mi->J = J2;
+	 } else mi->J = J;
+	 for (i = 0; i < mi->n_seq; ++i) {
+		 for (j = 0; j < mi->J[i].n; ++j)
+			 if (mi->J[i].a[j].flag & MM_JUNC_ANNO) ++n_anno;
+			 else ++n_misc;
+	 }
+	 if (mm_verbose >= 3)
+		 fprintf(stderr, "[%s] there are %d annotated and %d other splice positions in the index\n", __func__, n_anno, n_misc);
+	 return 0;
+ }
+ 
+ static int32_t mm_idx_jump_get_core(int32_t n, const mm_idx_jjump1_t *a, int32_t x) // similar to mm_idx_find_intv()
+ {
+	 int32_t s = 0, e = n;
+	 if (n == 0) return -1;
+	 if (x < a[0].off) return -1;
+	 while (s < e) {
+		 int32_t mid = s + (e - s) / 2;
+		 if (x >= a[mid].off && (mid + 1 >= n || x < a[mid+1].off)) return mid;
+		 else if (x < a[mid].off) e = mid;
+		 else s = mid + 1;
+	 }
+	 assert(0);
+ }
+ 
+ const mm_idx_jjump1_t *mm_idx_jump_get(const mm_idx_t *db, int32_t cid, int32_t st, int32_t en, int32_t *n)
+ {
+	 mm_idx_jjump_t *s;
+	 int32_t l, r;
+	 *n = 0;
+	 if (cid >= db->n_seq || cid < 0 || db->J == 0) return 0;
+	 if (en < 0 || en > db->seq[cid].len) en = db->seq[cid].len;
+	 s = &db->J[cid];
+	 if (s->n == 0) return 0;
+	 l = mm_idx_jump_get_core(s->n, s->a, st);
+	 r = mm_idx_jump_get_core(s->n, s->a, en);
+	 *n = r - l;
+	 return &s->a[l + 1];
+ }
+ 
+ /****************
+  * splice score *
+  ****************/
+ 
+ typedef struct mm_idx_spsc_s {
+	 uint32_t n, m;
+	 uint64_t *a; // pos<<56 | score<<1 | acceptor
+ } mm_idx_spsc_t;
+ 
+ int32_t mm_idx_spsc_read(mm_idx_t *idx, const char *fn, int32_t max_sc)
+ {
+	 gzFile fp;
+	 kstring_t str = {0,0,0};
+	 kstream_t *ks;
+	 int32_t dret, j;
+	 int64_t n_read = 0;
+ 
+	 fp = fn && strcmp(fn, "-") != 0? gzopen(fn, "rb") : gzdopen(0, "rb");
+	 if (fp == 0) return -1;
+	 if (idx->h == 0) mm_idx_index_name(idx);
+	 if (max_sc > 63) max_sc = 63;
+	 idx->spsc = Kcalloc(0, mm_idx_spsc_t, idx->n_seq * 2);
+	 ks = ks_init(fp);
+	 while (ks_getuntil(ks, KS_SEP_LINE, &str, &dret) >= 0) {
+		 mm_idx_spsc_t *s;
+		 char *p, *q, *name = 0;
+		 int32_t i, type = -1, strand = 0, cid = -1, score = -1;
+		 int64_t pos = -1;
+		 for (i = 0, p = q = str.s;; ++p) {
+			 if (*p == '\t' || *p == 0) {
+				 int c = *p;
+				 *p = 0;
+				 if (i == 0) {
+					 name = q;
+				 } else if (i == 1) {
+					 pos = atol(q);
+				 } else if (i == 2) {
+					 strand = *q == '+'? 1 : '-'? -1 : 0;
+				 } else if (i == 3) {
+					 type = *q == 'D'? 0 : *q == 'A'? 1 : -1;
+				 } else if (i == 4) {
+					 score = atoi(q);
+					 break;
+				 }
+				 if (c == 0) break;
+				 q = p + 1, ++i;
+			 }
+		 }
+		 if (i < 4) continue; // not enough fields
+		 if (score > max_sc) score = max_sc;
+		 if (score < -max_sc) score = -max_sc;
+		 cid = mm_idx_name2id(idx, name);
+		 if (cid < 0 || type < 0 || strand == 0 || pos < 0) continue; // FIXME: give a warning!
+		 s = &idx->spsc[cid << 1 | (strand > 0? 0 : 1)];
+		 Kgrow(0, uint64_t, s->a, s->n, s->m);
+		 if (pos > 0 && pos < idx->seq[cid].len) { // ignore scores at the ends
+			 s->a[s->n++] = (uint64_t)pos << 8 | (score + KSW_SPSC_OFFSET) << 1 | type;
+			 ++n_read;
+		 }
+	 }
+	 ks_destroy(ks);
+	 gzclose(fp);
+	 for (j = 0; j < idx->n_seq * 2; ++j) {
+		 mm_idx_spsc_t *s = &idx->spsc[j];
+		 if (s->n > 0)
+			 radix_sort_64(s->a, s->a + s->n);
+	 }
+	 if (mm_verbose >= 3)
+		 fprintf(stderr, "[M::%s] read %ld splice scores\n", __func__, (long)n_read);
+	 return 0;
+ }
+ 
+ static int32_t mm_idx_find_intv(int32_t n, const uint64_t *a, int64_t x)
+ {
+	 int32_t s = 0, e = n;
+	 if (n == 0) return -1;
+	 if (x < a[0]>>8) return -1;
+	 while (s < e) {
+		 int32_t mid = s + (e - s) / 2;
+		 if (x >= a[mid]>>8 && (mid + 1 >= n || x < a[mid+1]>>8)) return mid;
+		 else if (x < a[mid]>>8) e = mid;
+		 else s = mid + 1;
+	 }
+	 assert(0);
+ }
+ 
+ int64_t mm_idx_spsc_get(const mm_idx_t *db, int32_t cid, int64_t st, int64_t en, int32_t rev, uint8_t *sc)
+ {
+	 const mm_idx_spsc_t *s;
+	 if (cid >= db->n_seq || cid < 0 || db->spsc == 0) return -1;
+	 if (en < 0 || en > db->seq[cid].len) en = db->seq[cid].len;
+	 memset(sc, 0xff, en - st);
+	 s = &db->spsc[cid << 1 | (!!rev)];
+	 if (s->n > 0) {
+		 int32_t j, l, r;
+		 l = mm_idx_find_intv(s->n, s->a, st);
+		 r = mm_idx_find_intv(s->n, s->a, en);
+		 for (j = l + 1; j <= r; ++j) {
+			 int64_t x = (s->a[j]>>8) - st;
+			 uint8_t score = s->a[j] & 0xff;
+			 assert(x <= en - st);
+			 if (x == en - st) continue;
+			 if (sc[x] == 0xff || sc[x] < score) sc[x] = score;
+		 }
+	 }
+	 return en - st;
+ }

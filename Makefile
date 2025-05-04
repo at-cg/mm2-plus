@@ -9,7 +9,7 @@ CPPFLAGS :=
 LIBS :=
 # List of object files
 OBJS=		src/kthread.o src/kalloc.o src/misc.o src/bseq.o src/sketch.o src/sdust.o src/options.o src/index.o \
-			src/lchain.o src/align.o src/hit.o src/seed.o src/map.o src/format.o src/pe.o src/esterr.o src/splitidx.o \
+			src/lchain.o src/align.o src/hit.o src/seed.o src/jump.o src/map.o src/format.o src/pe.o src/esterr.o src/splitidx.o \
 			src/ksw2_ll_sse.o src/parallel_sort.o
 # Name of the executable
 PROG=		mm2plus
@@ -259,9 +259,10 @@ src/bseq.o: src/bseq.h src/kvec.h src/kalloc.h src/kseq.h
 src/esterr.o: src/mmpriv.h src/minimap.h src/bseq.h src/kseq.h
 src/example.o: src/minimap.h src/kseq.h
 src/format.o: src/kalloc.h src/mmpriv.h src/minimap.h src/bseq.h src/kseq.h
-src/hit.o: src/mmpriv.h src/minimap.h src/bseq.h src/kseq.h src/kalloc.h src/khash.h src/IntervalTree.h
+src/hit.o: src/mmpriv.h src/minimap.h src/bseq.h src/kseq.h src/kalloc.h src/ksw2.h src/IntervalTree.h
 src/index.o: src/kthread.h src/bseq.h src/minimap.h src/mmpriv.h src/kseq.h src/kvec.h src/kalloc.h src/khash.h
-src/index.o: src/ksort.h
+src/index.o: src/khash.h src/ksort.h
+src/jump.o: src/mmpriv.h src/minimap.h src/bseq.h src/kseq.h
 src/kalloc.o: src/kalloc.h
 src/ksw2_extd2_sse.o: src/ksw2.h src/kalloc.h
 src/ksw2_exts2_sse.o: src/ksw2.h src/kalloc.h

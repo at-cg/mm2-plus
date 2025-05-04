@@ -1,6 +1,6 @@
 #!/usr/bin/env k8
 
-var paftools_version = '2.28-r1209';
+var paftools_version = '2.29-r1283';
 
 /*****************************
  ***** Library functions *****
@@ -2187,7 +2187,7 @@ function paf_mapeval(args)
 	}
 
 	var lineno = 0, last = null, a = [], n_unmapped = null;
-	var re_cigar = /(\d+)([MIDSHN])/g;
+	var re_cigar = /(\d+)([MIDSHN=X])/g;
 	while (file.readline(buf) >= 0) {
 		var m, line = buf.toString();
 		++lineno;
@@ -2225,7 +2225,7 @@ function paf_mapeval(args)
 				var n_gap = 0, mlen = 0;
 				while ((m = re_cigar.exec(t[5])) != null) {
 					var len = parseInt(m[1]);
-					if (m[2] == 'M') pos_end += len, mlen += len;
+					if (m[2] == 'M' || m[2] == 'X' || m[2] == '=') pos_end += len, mlen += len;
 					else if (m[2] == 'I') n_gap += len;
 					else if (m[2] == 'D') n_gap += len, pos_end += len;
 				}
@@ -2494,6 +2494,10 @@ function paf_junceval(args)
 		} else { // SAM
 			ctg_name = t[2], pos = parseInt(t[3]) - 1, cigar = t[5];
 			var flag = parseInt(t[1]);
+			if (flag & 1) {
+				if (flag & 0x40) qname += '/1';
+				else if (flag & 0x80) qname += '/2';
+			}
 			if (flag&0x100) continue; // secondary
 		}
 
@@ -3240,6 +3244,7 @@ function paf_sveval(args)
 			if (bed != null && bed[t[0]] == null) continue;
 			if (t[4] == '<INV>' || t[4] == '<INVDUP>') continue; // no inversion
 			if (/[\[\]]/.test(t[4])) continue; // no break points
+			if (t[6] != "." && t[6] != "PASS") continue;
 			var st = parseInt(t[1]) - 1, en = st + t[3].length;
 			// parse svlen
 			var b = _paf_get_alen(t), svlen = b[0];

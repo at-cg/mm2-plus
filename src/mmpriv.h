@@ -28,6 +28,9 @@
 #define MM_SEED_SEG_SHIFT  48
 #define MM_SEED_SEG_MASK   (0xffULL<<(MM_SEED_SEG_SHIFT))
 
+#define MM_JUNC_ANNO 0x1
+#define MM_JUNC_MISC 0x2
+
 #ifndef kroundup32
 #define kroundup32(x) (--(x), (x)|=(x)>>1, (x)|=(x)>>2, (x)|=(x)>>4, (x)|=(x)>>8, (x)|=(x)>>16, ++(x))
 #endif
@@ -37,6 +40,7 @@
 
 #define MALLOC(type, len) ((type*)malloc((len) * sizeof(type)))
 #define CALLOC(type, len) ((type*)calloc((len), sizeof(type)))
+#define REALLOC(type, ptr, cnt) ((type*)realloc((ptr), (cnt) * sizeof(type)))
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,6 +60,12 @@ typedef struct {
 	mm128_t *a;
 } mm_seg_t;
 
+typedef struct {
+	int32_t off, off2, cnt;
+	int16_t strand;
+	uint16_t flag;
+} mm_idx_jjump1_t;
+
 double cputime(void);
 double realtime(void);
 long peakrss(void);
@@ -73,9 +83,11 @@ double mm_event_identity(const mm_reg1_t *r);
 int mm_write_sam_hdr(const mm_idx_t *mi, const char *rg, const char *ver, int argc, char *argv[]);
 void mm_write_paf(kstring_t *s, const mm_idx_t *mi, const mm_bseq1_t *t, const mm_reg1_t *r, void *km, int64_t opt_flag);
 void mm_write_paf3(kstring_t *s, const mm_idx_t *mi, const mm_bseq1_t *t, const mm_reg1_t *r, void *km, int64_t opt_flag, int rep_len);
+void mm_write_paf4(kstring_t *s, const mm_idx_t *mi, const mm_bseq1_t *t, const mm_reg1_t *r, void *km, int64_t opt_flag, int rep_len, int n_seg, int seg_idx);
 void mm_write_sam(kstring_t *s, const mm_idx_t *mi, const mm_bseq1_t *t, const mm_reg1_t *r, int n_regs, const mm_reg1_t *regs);
 void mm_write_sam2(kstring_t *s, const mm_idx_t *mi, const mm_bseq1_t *t, int seg_idx, int reg_idx, int n_seg, const int *n_regs, const mm_reg1_t *const* regs, void *km, int64_t opt_flag);
 void mm_write_sam3(kstring_t *s, const mm_idx_t *mi, const mm_bseq1_t *t, int seg_idx, int reg_idx, int n_seg, const int *n_regss, const mm_reg1_t *const* regss, void *km, int64_t opt_flag, int rep_len);
+void mm_write_junc(kstring_t *s, const mm_idx_t *mi, const mm_bseq1_t *t, const mm_reg1_t *r);
 
 void mm_idxopt_init(mm_idxopt_t *opt);
 const uint64_t *mm_idx_get(const mm_idx_t *mi, uint64_t minier, int *n);
@@ -83,6 +95,9 @@ int32_t mm_idx_cal_max_occ(const mm_idx_t *mi, float f);
 int mm_idx_getseq2(const mm_idx_t *mi, int is_rev, uint32_t rid, uint32_t st, uint32_t en, uint8_t *seq);
 mm_reg1_t *mm_align_skeleton(void *km, const mm_mapopt_t *opt, const mm_idx_t *mi, int qlen, const char *qstr, int *n_regs_, mm_reg1_t *regs, mm128_t *a);
 mm_reg1_t *mm_gen_regs(void *km, uint32_t hash, int qlen, int n_u, uint64_t *u, mm128_t *a, int is_qstrand);
+int mm_idx_bed_read(mm_idx_t *mi, const char *fn, int read_junc);
+int mm_idx_jjump_read(mm_idx_t *mi, const char *fn, int flag, int min_sc);
+const mm_idx_jjump1_t *mm_idx_jump_get(const mm_idx_t *db, int32_t cid, int32_t st, int32_t en, int32_t *n);
 
 mm128_t *mg_lchain_dp(int max_dist_x, int max_dist_y, int bw, int max_skip, int max_iter, int min_cnt, int min_sc, float chn_pen_gap, float chn_pen_skip,
 					  int is_cdna, int n_segs, int64_t n, mm128_t *a, int *n_u_, uint64_t **_u, void *km);
@@ -100,14 +115,20 @@ void mm_select_sub_multi(void *km, float pri_ratio, float pri1, float pri2, int 
 int mm_filter_strand_retained(int n_regs, mm_reg1_t *r);
 void mm_filter_regs(const mm_mapopt_t *opt, int qlen, int *n_regs, mm_reg1_t *regs);
 void mm_hit_sort(void *km, int *n_regs, mm_reg1_t *r, float alt_diff_frac);
-void mm_set_mapq(void *km, int n_regs, mm_reg1_t *regs, int min_chain_sc, int match_sc, int rep_len, int is_sr);
+void mm_set_mapq2(void *km, int n_regs, mm_reg1_t *regs, int min_chain_sc, int match_sc, int rep_len, int is_sr, int is_splice);
 void mm_update_dp_max(int qlen, int n_regs, mm_reg1_t *regs, float frac, int a, int b);
+void mm_jump_split(void *km, const mm_idx_t *mi, const mm_mapopt_t *opt, int32_t qlen, const uint8_t *qseq, mm_reg1_t *r, int32_t ts_strand);
+
+mm_reg1_t *mm_align_skeleton(void *km, const mm_mapopt_t *opt, const mm_idx_t *mi, int qlen, const char *qstr, int *n_regs_, mm_reg1_t *regs, mm128_t *a);
+void mm_enlarge_cigar(mm_reg1_t *r, uint32_t n_cigar);
 
 void mm_est_err(const mm_idx_t *mi, int qlen, int n_regs, mm_reg1_t *regs, const mm128_t *a, int32_t n, const uint64_t *mini_pos);
 
 mm_seg_t *mm_seg_gen(void *km, uint32_t hash, int n_segs, const int *qlens, int n_regs0, const mm_reg1_t *regs0, int *n_regs, mm_reg1_t **regs, const mm128_t *a);
 void mm_seg_free(void *km, int n_segs, mm_seg_t *segs);
 void mm_pair(void *km, int max_gap_ref, int dp_bonus, int sub_diff, int match_sc, const int *qlens, int *n_regs, mm_reg1_t **regs);
+
+void mm_jump_split(void *km, const mm_idx_t *mi, const mm_mapopt_t *opt, int32_t qlen, const uint8_t *qseq, mm_reg1_t *r, int32_t ts_strand);
 
 FILE *mm_split_init(const char *prefix, const mm_idx_t *mi);
 mm_idx_t *mm_split_merge_prep(const char *prefix, int n_splits, FILE **fp, uint32_t *n_seq_part);

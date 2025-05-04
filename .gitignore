@@ -1,8 +1,9 @@
+.vscode
 .cproject
 .project
 .*.swp
 *.a
 *.o
 *.dSYM
-minimap2
+mm2plus
 mappy.c
