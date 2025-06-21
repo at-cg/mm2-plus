@@ -5,7 +5,7 @@
 
 ### Introduction
 
-**mm2-plus** is an fast long-read to genome and genome-to-genome aligner, built on top of [**minimap2**](https://github.com/lh3/minimap2) (Minimap2-2.39 (r1287)). We incorporated optimizations from **mm2-fast** (v1.0) and implemented parallel algorithms for efficient genome-to-genome alignment. The optimizations include:
+**mm2-plus** is an fast long-read to genome and genome-to-genome aligner, built on top of [**minimap2**](https://github.com/lh3/minimap2) (Minimap2-2.30 (r1287)). We incorporated optimizations from **mm2-fast** (v1.0) and implemented parallel algorithms for efficient genome-to-genome alignment. The optimizations include:
 
 1. **Parallel chaining**
 4. **Faster interval tree-based algorithm for selecting primary chains**
