@@ -127,8 +127,8 @@ Command **ov-eval** takes *sorted* read-to-reference alignment and read
 overlaps in PAF as input, and evaluates the sensitivity. For example:
 
 ```sh
-mm2plus -cx map-pb ref.fa reads.fq.gz | sort -k6,6 -k8,8n > reads-to-ref.paf
-mm2plus -x ava-pb reads.fq.gz reads.fq.gz > ovlp.paf
+./mm2plus -cx map-pb ref.fa reads.fq.gz | sort -k6,6 -k8,8n > reads-to-ref.paf
+./mm2plus -x ava-pb reads.fq.gz reads.fq.gz > ovlp.paf
 k8 ov-eval.js reads-to-ref.paf ovlp.paf
 ```
 

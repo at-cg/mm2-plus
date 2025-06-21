@@ -5,7 +5,7 @@
 
 ### Introduction
 
-**mm2-plus** is an fast long-read to genome and genome-to-genome aligner, built on top of [**minimap2**](https://github.com/lh3/minimap2) (Minimap2-2.29 (r1283)). We incorporated optimizations from **mm2-fast** (v1.0) and implemented parallel algorithms for efficient genome-to-genome alignment. The optimizations include:
+**mm2-plus** is an fast long-read to genome and genome-to-genome aligner, built on top of [**minimap2**](https://github.com/lh3/minimap2) (Minimap2-2.39 (r1287)). We incorporated optimizations from **mm2-fast** (v1.0) and implemented parallel algorithms for efficient genome-to-genome alignment. The optimizations include:
 
 1. **Parallel chaining**
 4. **Faster interval tree-based algorithm for selecting primary chains**
@@ -40,7 +40,7 @@ make
 conda install bioconda::mm2plus
 
 # Install with docker
-docker pull quay.io/biocontainers/mm2plus:1.1--h9ee0642_0
+docker pull quay.io/biocontainers/mm2plus:1.2--h9ee0642_0
 
 # test run
 ./mm2plus -cx asm20 test/MT-human.fa test/MT-orang.fa > out.paf
@@ -60,7 +60,7 @@ mm2-plus offers same command line interface as minimap2. Therefore, users can re
 
 ### Accuracy evaluation
 #### 1) Read Alignment
-The accuracy of `mm2-plus` can be validated against `minimap2` (v2.29). Ensure the `--max-chain-skip=1000000` parameter is used during the chaining phase for high precision. Follow these steps:
+The accuracy of `mm2-plus` can be validated against `minimap2` (v2.30). Ensure the `--max-chain-skip=1000000` parameter is used during the chaining phase for high precision. Follow these steps:
 
 ```bash
 # Run mm2-plus
@@ -71,7 +71,7 @@ cd mm2-plus && make deps && make
 
 ```bash
 # Run minimap2
-git clone https://github.com/lh3/minimap2.git -b v2.29
+git clone https://github.com/lh3/minimap2.git -b v2.30
 cd minimap2 && make
 ./minimap2 -ax map-ont test/MT-human.fa test/reads.fq --max-chain-skip=1000000 > mm2.sam
 ```
@@ -97,7 +97,7 @@ cd mm2-plus && make deps && make
 
 ```bash
 # Run minimap2
-git clone https://github.com/lh3/minimap2.git -b v2.29
+git clone https://github.com/lh3/minimap2.git -b v2.30
 cd minimap2 && make
 ./minimap2 -cx asm20 test/MT-human.fa test/MT-orang.fa > mm2.paf
 ```
@@ -207,8 +207,8 @@ Detailed evaluations are available from the [minimap2 paper][doi] or the
 Minimap2 is optimized for x86-64 CPUs. You can acquire precompiled binaries from
 the [release page][release] with:
 ```sh
-curl -L https://github.com/lh3/minimap2/releases/download/v2.29/minimap2-2.29_x64-linux.tar.bz2 | tar -jxvf -
-./minimap2-2.29_x64-linux/minimap2
+curl -L https://github.com/lh3/minimap2/releases/download/v2.30/minimap2-2.30_x64-linux.tar.bz2 | tar -jxvf -
+./minimap2-2.30_x64-linux/minimap2
 ```
 If you want to compile from the source, you need to have a C compiler, GNU make
 and zlib development files installed. Then type `make` in the source code

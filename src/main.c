@@ -125,6 +125,8 @@ static ko_longopt_t long_options[] = {
 	{ "jump-min-match", ko_required_argument, 360 },
 	{ "write-junc",     ko_no_argument,       361 },
 	{ "pass1",          ko_required_argument, 362 },
+	{ "spsc-scale",     ko_required_argument, 363 },
+	{ "spsc0",          ko_required_argument, 364 },
 	{ "dbg-seed-occ",   ko_no_argument,       501 },
 	{ "help",           ko_no_argument,       'h' },
 	{ "max-intron-len", ko_required_argument, 'G' },
@@ -182,6 +184,7 @@ int main(int argc, char *argv[])
 	mm_mapopt_t opt;
 	mm_idxopt_t ipt;
 	int i, c, n_threads = 3, n_parts, old_best_n = -1;
+	float spsc_scale = 0.7f;
 	char *fnw = 0, *rg = 0, *fn_bed_junc = 0, *fn_bed_jump = 0, *fn_bed_pass1 = 0, *fn_spsc = 0, *s, *alt_list = 0;
 	FILE *fp_help = stderr;
 	mm_idx_reader_t *idx_rdr;
@@ -317,6 +320,8 @@ int main(int argc, char *argv[])
 		else if (c == 361) opt.flag |= MM_F_OUT_JUNC | MM_F_CIGAR; // --write-junc
 		else if (c == 362) fn_bed_pass1 = o.arg; // --jump-pass1
 		else if (c == 501) mm_dbg_flag |= MM_DBG_SEED_FREQ; // --dbg-seed-occ
+		else if (c == 363) spsc_scale = atof(o.arg); // --spsc-scale
+		else if (c == 358 || c == 364) opt.junc_pen = atoi(o.arg); // --junc-pen or --spsc0
 		else if (c == 330) {
 			fprintf(stderr, "[WARNING] \033[1;31m --lj-min-ratio has been deprecated.\033[0m\n");
 		} else if (c == 313) { // --sr
@@ -554,7 +559,7 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "[WARNING] failed to load the pass-1 jump BED file\n");
 		}
 		if (fn_spsc) {
-			mm_idx_spsc_read(mi, fn_spsc, mm_max_spsc_bonus(&opt));
+			mm_idx_spsc_read2(mi, fn_spsc, mm_max_spsc_bonus(&opt), spsc_scale);
 			if (mi->spsc == 0 && mm_verbose >= 2)
 				fprintf(stderr, "[WARNING] failed to load the splice score file\n");
 		}

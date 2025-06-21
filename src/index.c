@@ -397,7 +397,6 @@ mm_idx_t *mm_idx_gen(mm_bseq_file_t *fp, int w, int k, int b, int flag, int mini
 	pl.mi = mm_idx_init(w, k, b, flag);
 
 	kt_pipeline(n_threads < 3? n_threads : 3, worker_pipeline, &pl, 3);
-
 	if (mm_verbose >= 3)
 		fprintf(stderr, "[M::%s::%.3f*%.2f] collected minimizers\n", __func__, realtime() - mm_realtime0, cputime() / (realtime() - mm_realtime0));
 
@@ -669,6 +668,10 @@ int mm_idx_alt_read(mm_idx_t *mi, const char *fn)
 		fprintf(stderr, "[M::%s] found %d ALT contigs\n", __func__, n_alt);
 	return n_alt;
 }
+
+/***************
+ * BED reading *
+ ***************/
 
 #define sort_key_bed(a) ((a).st)
 KRADIX_SORT_INIT(bed, mm_idx_intv1_t, sort_key_bed, 4)
@@ -964,69 +967,76 @@ int mm_idx_bed_junc(const mm_idx_t *mi, int32_t ctg, int32_t st, int32_t en, uin
 	 uint64_t *a; // pos<<56 | score<<1 | acceptor
  } mm_idx_spsc_t;
  
- int32_t mm_idx_spsc_read(mm_idx_t *idx, const char *fn, int32_t max_sc)
- {
-	 gzFile fp;
-	 kstring_t str = {0,0,0};
-	 kstream_t *ks;
-	 int32_t dret, j;
-	 int64_t n_read = 0;
- 
-	 fp = fn && strcmp(fn, "-") != 0? gzopen(fn, "rb") : gzdopen(0, "rb");
-	 if (fp == 0) return -1;
-	 if (idx->h == 0) mm_idx_index_name(idx);
-	 if (max_sc > 63) max_sc = 63;
-	 idx->spsc = Kcalloc(0, mm_idx_spsc_t, idx->n_seq * 2);
-	 ks = ks_init(fp);
-	 while (ks_getuntil(ks, KS_SEP_LINE, &str, &dret) >= 0) {
-		 mm_idx_spsc_t *s;
-		 char *p, *q, *name = 0;
-		 int32_t i, type = -1, strand = 0, cid = -1, score = -1;
-		 int64_t pos = -1;
-		 for (i = 0, p = q = str.s;; ++p) {
-			 if (*p == '\t' || *p == 0) {
-				 int c = *p;
-				 *p = 0;
-				 if (i == 0) {
-					 name = q;
-				 } else if (i == 1) {
-					 pos = atol(q);
-				 } else if (i == 2) {
-					 strand = *q == '+'? 1 : '-'? -1 : 0;
-				 } else if (i == 3) {
-					 type = *q == 'D'? 0 : *q == 'A'? 1 : -1;
-				 } else if (i == 4) {
-					 score = atoi(q);
-					 break;
-				 }
-				 if (c == 0) break;
-				 q = p + 1, ++i;
-			 }
-		 }
-		 if (i < 4) continue; // not enough fields
-		 if (score > max_sc) score = max_sc;
-		 if (score < -max_sc) score = -max_sc;
-		 cid = mm_idx_name2id(idx, name);
-		 if (cid < 0 || type < 0 || strand == 0 || pos < 0) continue; // FIXME: give a warning!
-		 s = &idx->spsc[cid << 1 | (strand > 0? 0 : 1)];
-		 Kgrow(0, uint64_t, s->a, s->n, s->m);
-		 if (pos > 0 && pos < idx->seq[cid].len) { // ignore scores at the ends
-			 s->a[s->n++] = (uint64_t)pos << 8 | (score + KSW_SPSC_OFFSET) << 1 | type;
-			 ++n_read;
-		 }
-	 }
-	 ks_destroy(ks);
-	 gzclose(fp);
-	 for (j = 0; j < idx->n_seq * 2; ++j) {
-		 mm_idx_spsc_t *s = &idx->spsc[j];
-		 if (s->n > 0)
-			 radix_sort_64(s->a, s->a + s->n);
-	 }
-	 if (mm_verbose >= 3)
-		 fprintf(stderr, "[M::%s] read %ld splice scores\n", __func__, (long)n_read);
-	 return 0;
- }
- 
+ int32_t mm_idx_spsc_read2(mm_idx_t *idx, const char *fn, int32_t max_sc, float scale)
+{
+	gzFile fp;
+	kstring_t str = {0,0,0};
+	kstream_t *ks;
+	int32_t dret, j;
+	int64_t n_read = 0;
+
+	fp = fn && strcmp(fn, "-") != 0? gzopen(fn, "rb") : gzdopen(0, "rb");
+	if (fp == 0) return -1;
+	if (idx->h == 0) mm_idx_index_name(idx);
+	if (max_sc > 63) max_sc = 63;
+	idx->spsc = Kcalloc(0, mm_idx_spsc_t, idx->n_seq * 2);
+	ks = ks_init(fp);
+	while (ks_getuntil(ks, KS_SEP_LINE, &str, &dret) >= 0) {
+		mm_idx_spsc_t *s;
+		char *p, *q, *name = 0;
+		int32_t i, type = -1, strand = 0, cid = -1, score = -1;
+		int64_t pos = -1;
+		for (i = 0, p = q = str.s;; ++p) {
+			if (*p == '\t' || *p == 0) {
+				int c = *p;
+				*p = 0;
+				if (i == 0) {
+					name = q;
+				} else if (i == 1) {
+					pos = atol(q);
+				} else if (i == 2) {
+					strand = *q == '+'? 1 : '-'? -1 : 0;
+				} else if (i == 3) {
+					type = *q == 'D'? 0 : *q == 'A'? 1 : -1;
+				} else if (i == 4) {
+					score = atoi(q);
+					break;
+				}
+				if (c == 0) break;
+				q = p + 1, ++i;
+			}
+		}
+		if (i < 4) continue; // not enough fields
+		if (scale > 0.0f && scale < 1.0f)
+			score = score > 0.0f? (int)(score * scale + .499) : (int)(score * scale - .499);
+		if (score > max_sc) score = max_sc;
+		if (score < -max_sc) score = -max_sc;
+		cid = mm_idx_name2id(idx, name);
+		if (cid < 0 || type < 0 || strand == 0 || pos < 0) continue; // FIXME: give a warning!
+		s = &idx->spsc[cid << 1 | (strand > 0? 0 : 1)];
+		Kgrow(0, uint64_t, s->a, s->n, s->m);
+		if (pos > 0 && pos < idx->seq[cid].len) { // ignore scores at the ends
+			s->a[s->n++] = (uint64_t)pos << 8 | (score + KSW_SPSC_OFFSET) << 1 | type;
+			++n_read;
+		}
+	}
+	ks_destroy(ks);
+	gzclose(fp);
+	for (j = 0; j < idx->n_seq * 2; ++j) {
+		mm_idx_spsc_t *s = &idx->spsc[j];
+		if (s->n > 0)
+			radix_sort_64(s->a, s->a + s->n);
+	}
+	if (mm_verbose >= 3)
+		fprintf(stderr, "[M::%s] read %ld splice scores\n", __func__, (long)n_read);
+	return 0;
+}
+
+int32_t mm_idx_spsc_read(mm_idx_t *idx, const char *fn, int32_t max_sc)
+{
+	return mm_idx_spsc_read2(idx, fn, max_sc, 1.0f);
+}
+
  static int32_t mm_idx_find_intv(int32_t n, const uint64_t *a, int64_t x)
  {
 	 int32_t s = 0, e = n;
