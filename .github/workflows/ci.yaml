@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential wget zlib1g-dev
+          python -m pip install --upgrade pip setuptools wheel Cython
+
+      - name: Build mm2-plus dependencies
+        run: make deps
+
+      - name: Build mm2-plus
+        run: make
+
+      - name: Test mm2-plus command line
+        run: |
+          ./mm2plus -cx map-ont test/MT-human.fa test/MT-orang.fa > out.paf
+          ./mm2plus -cx asm20 test/MT-human.fa test/MT-orang.fa > out-asm.paf
+          test -s out.paf
+          test -s out-asm.paf
+
+      - name: Build Python bindings
+        run: python setup.py build_ext --inplace
+
+      - name: Test Python bindings
+        run: python -m unittest discover -s tests -v

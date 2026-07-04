@@ -1,0 +1,13 @@
+include LICENSE.txt
+include README.md
+include python/README.md
+include pyproject.toml
+include setup.py
+recursive-include python *.h *.pxd *.py *.pyx *.md *.cpp
+recursive-include src *.c *.cpp *.h
+recursive-include sse2neon *.h
+recursive-include tests *.py
+prune build
+prune dist
+prune external
+global-exclude *.o *.a *.so *.py[cod] __pycache__

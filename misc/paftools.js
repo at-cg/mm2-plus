@@ -1,6 +1,6 @@
 #!/usr/bin/env k8
 
-var paftools_version = '2.30-r1287';
+var paftools_version = '2.31-r1302';
 
 /*****************************
  ***** Library functions *****
@@ -1740,10 +1740,11 @@ function paf_gff2bed(args)
 
 function paf_sam2paf(args)
 {
-	var c, pri_only = false, long_cs = false, pri_pri_only = false;
-	while ((c = getopt(args, "pPL")) != null) {
+	var c, pri_only = false, long_cs = false, pri_pri_only = false, allow_unmapped = false;
+	while ((c = getopt(args, "pPUL")) != null) {
 		if (c == 'p') pri_only = true;
 		else if (c == 'P') pri_pri_only = pri_only = true;
+		else if (c == 'U') allow_unmapped = true;
 		else if (c == 'L') long_cs = true;
 	}
 	if (args.length == getopt.ind) {
@@ -1751,6 +1752,7 @@ function paf_sam2paf(args)
 		print("Options:");
 		print("  -p      convert primary or supplementary alignments only");
 		print("  -P      convert primary alignments only");
+		print("  -U      convert unmapped reads as well");
 		print("  -L      output the cs tag in the long form");
 		exit(1);
 	}
@@ -1775,7 +1777,15 @@ function paf_sam2paf(args)
 		var flag = parseInt(t[1]);
 		if (t[9] != '*' && t[10] != '*' && t[9].length != t[10].length)
 			throw Error("at line " + lineno + ": inconsistent SEQ and QUAL lengths - " + t[9].length + " != " + t[10].length);
-		if (t[2] == '*' || (flag&4) || t[5] == '*') continue;
+        if (t[2] == '*' || (flag&4) || t[5] == '*') {
+			if (allow_unmapped) {
+            // emit an unmapped PAF line instead of skipping
+            // fields: qname, qlen, qstart, qend, strand, tname, tlen, tstart, tend, n_match, aln_len, mapq
+            var qlen_val = (t[9] == '*' ? 0 : t[9].length);
+            print([t[0], qlen_val, 0, 0, '*', '*', 0, 0, 0, 0, 0, 0].join("\t"));
+			}
+            continue;
+        }
 		if (pri_only && (flag&0x100)) continue;
 		if (pri_pri_only && (flag&0x900)) continue;
 		var tlen = ctg_len[t[2]];
@@ -2338,6 +2348,41 @@ function paf_mason2fq(args)
 	buf2.destroy();
 }
 
+// convert Mason read names to BED
+function paf_sim2bed(args)
+{
+	if (args.length == 0) {
+		print("Usage: paftools.js sim2bed <sim.txt>");
+		exit(1);
+	}
+	var buf = new Bytes();
+	var file = new File(args[0]);
+	while (file.readline(buf) >= 0) {
+		var line = buf.toString();
+		var t = line.split("!");
+		if (t.length < 5) continue;
+		var chr = t[1], st, en, strand;
+		if (t[2].indexOf("_") >= 0) { // mason paired-end
+			var pos = t[2].split("_");
+			var end = t[3].split("_");
+			var m = /^(.)(.)\/([12])$/.exec(t[4]);
+			if (m == null) continue;
+			strand = m[3] == "1" ? m[1] : m[2];
+			var read_no = parseInt(m[3]) - 1;
+			st = parseInt(pos[read_no]);
+			en = parseInt(end[read_no]);
+		} else { // badread/pbsim long reads
+			st = parseInt(t[2]);
+			en = parseInt(t[3]);
+			strand = t[4];
+		}
+		if (st > en) { var tmp = st; st = en; en = tmp; }
+		print([chr, st, en, line, 0, strand].join("\t"));
+	}
+	file.close();
+	buf.destroy();
+}
+
 // convert pbsim MAF to FASTQ
 function paf_pbsim2fq(args)
 {
@@ -2393,6 +2438,53 @@ function paf_pbsim2fq(args)
 	}
 	buf.destroy();
 	buf2.destroy();
+}
+
+function paf_badread2fa(args)
+{
+	if (args.length < 2) {
+		print("Usage: paftools.js badread2fa <ref.fa.fai> <badread.fq>");
+		exit(1);
+	}
+
+	var len = {}, file, buf = new Bytes();
+	file = new File(args[0]);
+	while (file.readline(buf) >= 0) {
+		var t = buf.toString().split("\t");
+		len[t[0]] = parseInt(t[1]);
+	}
+	file.close();
+
+	var id = 0, n_discard = 0;
+	file = new File(args[1]);
+	while (file.readline(buf) >= 0) {
+		var line = buf.toString();
+		var m, tag = '', a = null, is_fq = line[0] == '@'? true : false;
+		if (!/\schimera\s/.test(line) && (m = /\s(\S+),([+-])strand,(\d+)-(\d+).*read_identity=([0-9\.]+)%/.exec(line)) != null) {
+			if (len[m[1]] == null) throw Error("failed to find the contig length of " + m[1]);
+			m[3] = parseInt(m[3]);
+			m[4] = parseInt(m[4]);
+			if (m[2] == '+')
+				a = [ "S" + (id+1), m[1], m[3], m[4], m[2] ];
+			else
+				a = [ "S" + (id+1), m[1], len[m[1]] - m[4], len[m[1]] - m[3], m[2] ];
+			tag = "ri:f:" + m[5];
+		}
+		file.readline(buf);
+		var seq = buf.toString();
+		if (is_fq) {
+			file.readline(buf);
+			file.readline(buf);
+		}
+		if (a != null) {
+			print(">" + a.join("!"), tag);
+			print(seq);
+		} else ++n_discard;
+		++id;
+	}
+	file.close();
+	buf.destroy();
+	warn("WARNING: discarded " + n_discard + " reads");
 }
 
 function paf_junceval(args)
@@ -3693,7 +3785,9 @@ function main(args)
 		print("  mapeval    evaluate mapping accuracy using mason2/PBSIM-simulated FASTQ");
 		print("  pafcmp     compare two PAF files");
 		print("  mason2fq   convert mason2-simulated SAM to FASTQ");
+	print("  sim2bed    convert mason2-simulated read names to BED");
 		print("  pbsim2fq   convert PBSIM-simulated MAF to FASTQ");
+		print("  badread2fa convert Baderead FASTQ to FASTA");
 		print("  junceval   evaluate splice junction consistency with known annotations");
 		print("  exoneval   evaluate exon-level consistency with known annotations");
 		print("  ov-eval    evaluate read overlap sensitivity using read-to-ref mapping");
@@ -3718,7 +3812,9 @@ function main(args)
 	else if (cmd == 'pafcmp') paf_pafcmp(args);
 	else if (cmd == 'bedcov') paf_bedcov(args);
 	else if (cmd == 'mason2fq') paf_mason2fq(args);
+	else if (cmd == 'sim2bed') paf_sim2bed(args);
 	else if (cmd == 'pbsim2fq') paf_pbsim2fq(args);
+	else if (cmd == 'badread2fa') paf_badread2fa(args);
 	else if (cmd == 'junceval') paf_junceval(args);
 	else if (cmd == 'exoneval') paf_exoneval(args);
 	else if (cmd == 'ov-eval') paf_ov_eval(args);

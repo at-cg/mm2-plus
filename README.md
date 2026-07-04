@@ -1,11 +1,13 @@
 [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/at-cg/mm2-plus/total?style=social)](https://github.com/at-cg/mm2-plus/releases)
+[![PyPI](https://img.shields.io/pypi/v/mappluspy.svg?style=flat)](https://pypi.org/project/mappluspy/)
+[![Build Status](https://github.com/at-cg/mm2-plus/actions/workflows/ci.yaml/badge.svg)](https://github.com/at-cg/mm2-plus/actions)
 [![BioConda Install](https://img.shields.io/conda/dn/bioconda/mm2plus?label=BioConda%20Installs)](https://anaconda.org/bioconda/mm2plus)
 [![Docker](https://quay.io/repository/biocontainers/mm2plus/status)](https://quay.io/repository/biocontainers/mm2plus)
 ## mm2-plus
 
 ### Introduction
 
-**mm2-plus** is an fast long-read to genome and genome-to-genome aligner, built on top of [**minimap2**](https://github.com/lh3/minimap2) (Minimap2-2.30 (r1287)). We incorporated optimizations from **mm2-fast** (v1.0) and implemented parallel algorithms for efficient genome-to-genome alignment. The optimizations include:
+**mm2-plus** is an fast long-read to genome and genome-to-genome aligner, built on top of [**minimap2**](https://github.com/lh3/minimap2) (Minimap2-2.31 (r1302)). We incorporated optimizations from **mm2-fast** (v1.0) and implemented parallel algorithms for efficient genome-to-genome alignment. The optimizations include:
 
 1. **Parallel chaining**
 4. **Faster interval tree-based algorithm for selecting primary chains**
@@ -40,7 +42,7 @@ make
 conda install bioconda::mm2plus
 
 # Install with docker
-docker pull quay.io/biocontainers/mm2plus:1.2--h9ee0642_0
+docker pull quay.io/biocontainers/mm2plus:1.3--h9ee0642_0
 
 # test run
 ./mm2plus -cx asm20 test/MT-human.fa test/MT-orang.fa > out.paf
@@ -57,6 +59,15 @@ mm2-plus offers same command line interface as minimap2. Therefore, users can re
 ./mm2plus -cx asm20 test/MT-human.fa test/MT-orang.fa > out.paf
 ```
 
+### Python bindings
+
+[![PyPI](https://img.shields.io/pypi/v/mappluspy.svg?style=flat)](https://pypi.org/project/mappluspy/)
+
+This repository also provides Python bindings to a subset of C APIs. File
+[python/README.md](python/README.md) gives the full documentation;
+[python/mm2plus.py](python/mm2plus.py) shows an example. This Python extension,
+mappluspy, is also [available from PyPI](https://pypi.org/project/mappluspy/) via
+`pip install mappluspy`.
 
 ### Accuracy evaluation
 #### 1) Read Alignment
@@ -71,7 +82,7 @@ cd mm2-plus && make deps && make
 
 ```bash
 # Run minimap2
-git clone https://github.com/lh3/minimap2.git -b v2.30
+git clone https://github.com/lh3/minimap2.git -b v2.31
 cd minimap2 && make
 ./minimap2 -ax map-ont test/MT-human.fa test/reads.fq --max-chain-skip=1000000 > mm2.sam
 ```
@@ -133,6 +144,7 @@ The scripts to reproduce the results are available [here](data/expts/)
 [![PyPI](https://img.shields.io/pypi/v/mappy.svg?style=flat)](https://pypi.python.org/pypi/mappy)
 [![Build Status](https://github.com/lh3/minimap2/actions/workflows/ci.yaml/badge.svg)](https://github.com/lh3/minimap2/actions)
 ## <a name="started"></a>Getting Started
+**ALERT:** `minimap2.com` is a [phishing site](https://github.com/lh3/minimap2/issues/1316). Please don't use anything from that website.
 ```sh
 git clone https://github.com/lh3/minimap2
 cd minimap2 && make
@@ -207,8 +219,8 @@ Detailed evaluations are available from the [minimap2 paper][doi] or the
 Minimap2 is optimized for x86-64 CPUs. You can acquire precompiled binaries from
 the [release page][release] with:
 ```sh
-curl -L https://github.com/lh3/minimap2/releases/download/v2.30/minimap2-2.30_x64-linux.tar.bz2 | tar -jxvf -
-./minimap2-2.30_x64-linux/minimap2
+curl -L https://github.com/lh3/minimap2/releases/download/v2.31/minimap2-2.31_x64-linux.tar.bz2 | tar -jxvf -
+./minimap2-2.31_x64-linux/minimap2
 ```
 If you want to compile from the source, you need to have a C compiler, GNU make
 and zlib development files installed. Then type `make` in the source code
