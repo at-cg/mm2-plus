@@ -7,6 +7,11 @@ JEMALLOC_URL := https://github.com/jemalloc/jemalloc/releases/download/5.3.0/jem
 ZLIB_URL := https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz
 CPPFLAGS := 
 LIBS :=
+# Linker mode marker placed after the statically-linked deps (jemalloc/zlib).
+# Regular builds keep the remaining system libs dynamic. create_release.sh sets
+# BDYNAMIC= (empty) together with RELEASE_LDFLAGS=-static for a fully static build.
+BDYNAMIC ?= -Wl,-Bdynamic
+RELEASE_LDFLAGS ?=
 # List of object files
 OBJS=		src/kthread.o src/kalloc.o src/misc.o src/bseq.o src/sketch.o src/sdust.o src/options.o src/index.o \
 			src/lchain.o src/align.o src/hit.o src/seed.o src/jump.o src/map.o src/format.o src/pe.o src/esterr.o src/splitidx.o \
@@ -135,10 +140,7 @@ ifneq ($(tsan),)
 	LIBS+=-fsanitize=thread -ldl
 endif
 
-# Optional extra link flags for release builds (e.g. -static or -static-libstdc++ -static-libgcc)
-# BDYNAMIC controls the linker mode marker after the statically-linked deps.
-# Default keeps system libs dynamic; set BDYNAMIC= (empty) with RELEASE_LDFLAGS=-static for a fully static build.
-BDYNAMIC ?= -Wl,-Bdynamic
+# Optional extra link flags for release builds (set via create_release.sh).
 LIBS += $(RELEASE_LDFLAGS)
 
 .PHONY:all extra clean depend
