@@ -71,7 +71,7 @@ mappluspy, is also [available from PyPI](https://pypi.org/project/mappluspy/) vi
 
 ### Accuracy evaluation
 #### 1) Read Alignment
-The accuracy of `mm2-plus` can be validated against `minimap2` (v2.30). Ensure the `--max-chain-skip=1000000` parameter is used during the chaining phase for high precision. Follow these steps:
+The accuracy of `mm2-plus` can be validated against `minimap2` (v2.31). Ensure the `--max-chain-skip=1000000` parameter is used during the chaining phase for high precision. Follow these steps:
 
 ```bash
 # Run mm2-plus
@@ -108,7 +108,7 @@ cd mm2-plus && make deps && make
 
 ```bash
 # Run minimap2
-git clone https://github.com/lh3/minimap2.git -b v2.30
+git clone https://github.com/lh3/minimap2.git -b v2.31
 cd minimap2 && make
 ./minimap2 -cx asm20 test/MT-human.fa test/MT-orang.fa > mm2.paf
 ```
