@@ -103,13 +103,15 @@ ifeq ($(arm_neon),) # if arm_neon is not defined
 ifeq ($(sse2only),) # if sse2only is not defined
 	ifeq ($(base),1)
 		CPPFLAGS += -g -Wall -O2 -w -DHAVE_KALLOC -I$(ZLIB_DIR)/include
-		LIBS += -Wl,-Bstatic -lz -Wl,-Bdynamic -fopenmp -lm -lpthread -ldl
+		LIBS += -Wl,-Bstatic -lz $(BDYNAMIC) -fopenmp -lm -lpthread -ldl
 	else
 		CPPFLAGS += -g -std=c++2a -O3 -w -DHAVE_KALLOC -I$(JEMALLOC_DIR)/include -I$(ZLIB_DIR)/include
-		LIBS += -Wl,-Bstatic -ljemalloc -lz -Wl,-Bdynamic -fopenmp -lm -lpthread -ldl
+		LIBS += -Wl,-Bstatic -ljemalloc -lz $(BDYNAMIC) -fopenmp -lm -lpthread -ldl
 	endif
 	OBJS+=src/ksw2_extz2_sse41.o src/ksw2_extd2_sse41.o src/ksw2_exts2_sse41.o src/ksw2_extz2_sse2.o src/ksw2_extd2_sse2.o src/ksw2_exts2_sse2.o src/ksw2_dispatch.o src/ksw2_extd2_avx.o
-	EXTRAFLAGS+=-march=native
+	SIMD_FLAGS ?= -march=native
+	CPPFLAGS+=$(SIMD_FLAGS)
+	EXTRAFLAGS+=$(SIMD_FLAGS)
 else                # if sse2only is defined
 	OBJS+=src/ksw2_extz2_sse.o src/ksw2_extd2_sse.o src/ksw2_exts2_sse.o
 endif
@@ -132,6 +134,12 @@ ifneq ($(tsan),)
 	CPPFLAGS+=-fsanitize=thread
 	LIBS+=-fsanitize=thread -ldl
 endif
+
+# Optional extra link flags for release builds (e.g. -static or -static-libstdc++ -static-libgcc)
+# BDYNAMIC controls the linker mode marker after the statically-linked deps.
+# Default keeps system libs dynamic; set BDYNAMIC= (empty) with RELEASE_LDFLAGS=-static for a fully static build.
+BDYNAMIC ?= -Wl,-Bdynamic
+LIBS += $(RELEASE_LDFLAGS)
 
 .PHONY:all extra clean depend
 .SUFFIXES:.c .o
@@ -163,7 +171,7 @@ jemalloc:
 	wget $(JEMALLOC_URL) -O jemalloc.tar.bz2 && \
 	tar -xjf jemalloc.tar.bz2 && \
 	cd jemalloc-5.3.0 && \
-	./configure --disable-shared --enable-static --prefix=$(JEMALLOC_DIR) && \
+	./configure --disable-shared --enable-static --with-pic --prefix=$(JEMALLOC_DIR) && \
 	make -j4 && \
 	make install
 
@@ -176,7 +184,7 @@ zlib:
 	wget $(ZLIB_URL) -O zlib.tar.gz && \
 	tar -xzf zlib.tar.gz && \
 	cd zlib-1.3.1 && \
-	./configure --static --prefix=$(ZLIB_DIR) && \
+	CFLAGS="-O3 -fPIC" ./configure --static --prefix=$(ZLIB_DIR) && \
 	make -j4 && \
 	make install
 
