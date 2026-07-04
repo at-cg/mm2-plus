@@ -128,7 +128,7 @@ void ksw_extd2_avx512(void *km, int qlen, const uint8_t *query, int tlen,
     __m512i one_, two_, three_, four_, s1_, s2_, s3_, s4_;
         
     ksw_reset_extz(ez);
-    if (m <= 1 || qlen <= 0 || tlen <= 0) return;
+    if (m <= 1 || qlen <= 0 || tlen <= 0 || tlen > 0x3fffffff) return;
 
     if (q2 + e2 < q + e) t = q, q = q2, q2 = t, t = e, e = e2, e2 = t; // make sure q+e no larger than q2+e2
     s1_   = _mm512_set1_epi8(0x08);
