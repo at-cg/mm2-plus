@@ -5,11 +5,9 @@ ZLIB_DIR := $(CURDIR)/external/zlib
 # URLs for downloading the libraries
 JEMALLOC_URL := https://github.com/jemalloc/jemalloc/releases/download/5.3.0/jemalloc-5.3.0.tar.bz2
 ZLIB_URL := https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz
+DEP_CFLAGS ?= -O2 -fPIC -march=x86-64 -mtune=generic
 CPPFLAGS := 
 LIBS :=
-# Linker mode marker placed after the statically-linked deps (jemalloc/zlib).
-# Regular builds keep the remaining system libs dynamic. create_release.sh sets
-# BDYNAMIC= (empty) together with RELEASE_LDFLAGS=-static for a fully static build.
 BDYNAMIC ?= -Wl,-Bdynamic
 RELEASE_LDFLAGS ?=
 # List of object files
@@ -21,7 +19,7 @@ PROG=		mm2plus
 # Compiler and linker flags
 LDFLAGS := -Wl,-L$(JEMALLOC_DIR)/lib -Wl,-L$(ZLIB_DIR)/lib
 
-# Extra flags and includes
+BASE_FLAGS :=
 EXTRAFLAGS :=
 INCLUDES :=
 
@@ -115,7 +113,6 @@ ifeq ($(sse2only),) # if sse2only is not defined
 	endif
 	OBJS+=src/ksw2_extz2_sse41.o src/ksw2_extd2_sse41.o src/ksw2_exts2_sse41.o src/ksw2_extz2_sse2.o src/ksw2_extd2_sse2.o src/ksw2_exts2_sse2.o src/ksw2_dispatch.o src/ksw2_extd2_avx.o
 	SIMD_FLAGS ?= -march=native
-	CPPFLAGS+=$(SIMD_FLAGS)
 	EXTRAFLAGS+=$(SIMD_FLAGS)
 else                # if sse2only is defined
 	OBJS+=src/ksw2_extz2_sse.o src/ksw2_extd2_sse.o src/ksw2_exts2_sse.o
@@ -140,24 +137,25 @@ ifneq ($(tsan),)
 	LIBS+=-fsanitize=thread -ldl
 endif
 
-# Optional extra link flags for release builds (set via create_release.sh).
+# Optional extra link flags for release builds. Leave empty for normal `make`;
+# create_release.sh sets this to -static plus release linker allowances.
 LIBS += $(RELEASE_LDFLAGS)
 
 .PHONY:all extra clean depend
 .SUFFIXES:.c .o
 
 .c.o:
-		$(CXX) -c $(CPPFLAGS) $(INCLUDES) $< -o $@
+		$(CXX) -c $(BASE_FLAGS) $(CPPFLAGS) $(INCLUDES) $< -o $@
 
 all:$(PROG)
 
 extra:all $(PROG_EXTRA)
 
 mm2plus:src/main.o libminimap2.a 
-		$(CXX) $(CPPFLAGS) src/main.o -o $@ -L. -lminimap2 $(LDFLAGS) $(LIBS)
+		$(CXX) $(BASE_FLAGS) $(CPPFLAGS) src/main.o -o $@ -L. -lminimap2 $(LDFLAGS) $(LIBS)
 
 minimap2-lite:src/example.o libminimap2.a
-		$(CXX) $(CPPFLAGS) $< -o $@ -L. -lminimap2 $(LDFLAGS) $(LIBS)
+		$(CXX) $(BASE_FLAGS) $(CPPFLAGS) $< -o $@ -L. -lminimap2 $(LDFLAGS) $(LIBS)
 
 libminimap2.a:$(OBJS)
 		$(AR) -csru $@ $(OBJS)
@@ -170,12 +168,12 @@ jemalloc:
 	@echo "Building jemalloc..."
 	mkdir -p external
 	cd external && \
-	wget $(JEMALLOC_URL) -O jemalloc.tar.bz2 && \
-	tar -xjf jemalloc.tar.bz2 && \
-	cd jemalloc-5.3.0 && \
-	./configure --disable-shared --enable-static --with-pic --prefix=$(JEMALLOC_DIR) && \
-	make -j4 && \
-	make install
+		wget $(JEMALLOC_URL) -O jemalloc.tar.bz2 && \
+		tar -xjf jemalloc.tar.bz2 && \
+		cd jemalloc-5.3.0 && \
+		CFLAGS="$(DEP_CFLAGS)" ./configure --disable-shared --enable-static --with-pic --prefix=$(JEMALLOC_DIR) && \
+		make -j4 && \
+		make install
 
 # Download and build zlib
 .PHONY: zlib
@@ -183,12 +181,12 @@ zlib:
 	@echo "Building zlib..."
 	mkdir -p external
 	cd external && \
-	wget $(ZLIB_URL) -O zlib.tar.gz && \
-	tar -xzf zlib.tar.gz && \
-	cd zlib-1.3.1 && \
-	CFLAGS="-O3 -fPIC" ./configure --static --prefix=$(ZLIB_DIR) && \
-	make -j4 && \
-	make install
+		wget $(ZLIB_URL) -O zlib.tar.gz && \
+		tar -xzf zlib.tar.gz && \
+		cd zlib-1.3.1 && \
+		CFLAGS="$(DEP_CFLAGS)" ./configure --static --prefix=$(ZLIB_DIR) && \
+		make -j4 && \
+		make install
 
 # Build dependencies
 .PHONY: deps
@@ -198,47 +196,47 @@ deps: jemalloc zlib
 
 ifeq ($(arm_neon),)   # if arm_neon is defined, compile this target with the default setting (i.e. no -msse2)
 src/ksw2_ll_sse.o:src/ksw2_ll_sse.c src/ksw2.h src/kalloc.h
-		$(CXX) -c $(CPPFLAGS) -msse2 $(INCLUDES) $< -o $@
+		$(CXX) -c $(BASE_FLAGS) $(CPPFLAGS) -msse2 $(INCLUDES) $< -o $@
 endif
 
 src/ksw2_extz2_sse41.o:src/ksw2_extz2_sse.c src/ksw2.h src/kalloc.h
-		$(CXX) -c $(CPPFLAGS) -msse4.1 -DKSW_CPU_DISPATCH $(INCLUDES) $< -o $@
+		$(CXX) -c $(BASE_FLAGS) $(CPPFLAGS) -msse4.1 -DKSW_CPU_DISPATCH $(INCLUDES) $< -o $@
 
 src/ksw2_extz2_sse2.o:src/ksw2_extz2_sse.c src/ksw2.h src/kalloc.h
-		$(CXX) -c $(CPPFLAGS) -msse2 -mno-sse4.1 -DKSW_CPU_DISPATCH -DKSW_SSE2_ONLY $(INCLUDES) $< -o $@
+		$(CXX) -c $(BASE_FLAGS) $(CPPFLAGS) -msse2 -mno-sse4.1 -DKSW_CPU_DISPATCH -DKSW_SSE2_ONLY $(INCLUDES) $< -o $@
 
 src/ksw2_extd2_sse41.o:src/ksw2_extd2_sse.c src/ksw2.h src/kalloc.h
-		$(CXX) -c $(CPPFLAGS) -msse4.1 -DKSW_CPU_DISPATCH $(INCLUDES) $< -o $@
+		$(CXX) -c $(BASE_FLAGS) $(CPPFLAGS) -msse4.1 -DKSW_CPU_DISPATCH $(INCLUDES) $< -o $@
 
 src/ksw2_extd2_sse2.o:src/ksw2_extd2_sse.c src/ksw2.h src/kalloc.h
-		$(CXX) -c $(CPPFLAGS) -msse2 -mno-sse4.1 -DKSW_CPU_DISPATCH -DKSW_SSE2_ONLY $(INCLUDES) $< -o $@
+		$(CXX) -c $(BASE_FLAGS) $(CPPFLAGS) -msse2 -mno-sse4.1 -DKSW_CPU_DISPATCH -DKSW_SSE2_ONLY $(INCLUDES) $< -o $@
 
 src/ksw2_exts2_sse41.o:src/ksw2_exts2_sse.c src/ksw2.h src/kalloc.h
-		$(CXX) -c $(CPPFLAGS) -msse4.1 -DKSW_CPU_DISPATCH $(INCLUDES) $< -o $@
+		$(CXX) -c $(BASE_FLAGS) $(CPPFLAGS) -msse4.1 -DKSW_CPU_DISPATCH $(INCLUDES) $< -o $@
 
 src/ksw2_exts2_sse2.o:src/ksw2_exts2_sse.c src/ksw2.h src/kalloc.h
-		$(CXX) -c $(CPPFLAGS) -msse2 -mno-sse4.1 -DKSW_CPU_DISPATCH -DKSW_SSE2_ONLY $(INCLUDES) $< -o $@
+		$(CXX) -c $(BASE_FLAGS) $(CPPFLAGS) -msse2 -mno-sse4.1 -DKSW_CPU_DISPATCH -DKSW_SSE2_ONLY $(INCLUDES) $< -o $@
 
 src/ksw2_dispatch.o:src/ksw2_dispatch.c src/ksw2.h
-		$(CXX) -c $(CPPFLAGS) -msse4.1 -DKSW_CPU_DISPATCH $(INCLUDES) $< -o $@
+		$(CXX) -c $(BASE_FLAGS) $(CPPFLAGS) -msse4.1 -DKSW_CPU_DISPATCH $(INCLUDES) $< -o $@
 
 src/lchain.o:src/lchain.c src/parallel_chaining_v2_22.h
-		$(CXX) -c -fopenmp $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
+		$(CXX) -c -fopenmp $(BASE_FLAGS) $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
 
 src/parallel_sort.o:src/parallel_sort.cpp
-		$(CXX) -c -fopenmp -D_GLIBCXX_PARALLEL $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
+		$(CXX) -c -fopenmp -D_GLIBCXX_PARALLEL $(BASE_FLAGS) $(CPPFLAGS) $(INCLUDES) $< -o $@
 
 src/hit.o:src/hit.c
-		$(CXX) -c -fopenmp $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
+		$(CXX) -c -fopenmp $(BASE_FLAGS) $(CPPFLAGS) $(INCLUDES) $< -o $@
 
 src/esterr.o:src/esterr.c
-		$(CXX) -c -fopenmp $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
+		$(CXX) -c -fopenmp $(BASE_FLAGS) $(CPPFLAGS) $(INCLUDES) $< -o $@
 
 src/kthread.o:src/kthread.c
-		$(CXX) -c -fopenmp $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
+		$(CXX) -c -fopenmp $(BASE_FLAGS) $(CPPFLAGS) $(INCLUDES) $< -o $@
 
 src/ksw2_extd2_avx.o:src/ksw2_extd2_avx.c src/ksw2.h src/kalloc.h
-		$(CXX) -c $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
+		$(CXX) -c $(BASE_FLAGS) $(CPPFLAGS) $(EXTRAFLAGS) $(INCLUDES) $< -o $@
 
 # NEON-specific targets on ARM
 

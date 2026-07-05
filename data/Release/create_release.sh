@@ -23,21 +23,22 @@ if [[ -z "$CXX_BIN" ]]; then
 fi
 [[ -z "$CC_BIN" ]] && CC_BIN="gcc"
 
-# --- static link flags -------------------------------------------------------
-# -static                         : fully static executable
-# --allow-multiple-definition     : jemalloc overrides glibc malloc/free/realloc
 STATIC_LDFLAGS="-static -Wl,--allow-multiple-definition"
 
-# --- ISA variants: name -> SIMD feature flag ---------------------------------
-# The conda toolchain has a plain x86-64/SSE2 default baseline, so these -m
-# feature flags restrict each binary to exactly that ISA (no higher SIMD leaks in).
 VARIANTS=(avx512 avx2 avx sse4.2 sse4.1)
+declare -A BASE=(
+    [avx512]="-mno-avx -mno-avx2 -mno-avx512f -mno-avx512bw"
+    [avx2]="-mavx2 -mno-avx512f -mno-avx512bw"
+    [avx]="-mavx -mno-avx2 -mno-avx512f -mno-avx512bw"
+    [sse4.2]="-msse4.2 -mno-avx -mno-avx2 -mno-avx512f -mno-avx512bw"
+    [sse4.1]="-msse4.1 -mno-sse4.2 -mno-avx -mno-avx2 -mno-avx512f -mno-avx512bw"
+)
 declare -A ARCH=(
     [avx512]="-mavx512bw"
-    [avx2]="-mavx2"
-    [avx]="-mavx"
-    [sse4.2]="-msse4.2"
-    [sse4.1]="-msse4.1"
+    [avx2]="-mavx2 -mno-avx512f -mno-avx512bw"
+    [avx]="-mavx -mno-avx2 -mno-avx512f -mno-avx512bw"
+    [sse4.2]="-msse4.2 -mno-avx -mno-avx2 -mno-avx512f -mno-avx512bw"
+    [sse4.1]="-msse4.1 -mno-sse4.2 -mno-avx -mno-avx2 -mno-avx512f -mno-avx512bw"
 )
 
 echo "=============================================================="
@@ -57,9 +58,7 @@ if [[ ! -f external/jemalloc/lib/libjemalloc.a || ! -f external/zlib/lib/libz.a 
     make deps
 fi
 
-# --- helper: count instrs/registers only inside mm2-plus's OWN functions ------
-# (mm_*, mg_*, ksw_*, SoA/anchor helpers) so static libc/libstdc++/libgomp/
-# jemalloc/zlib code does not pollute the ISA verification.
+
 own_count() { # $1=binary  $2=regex of instruction/register
     objdump -d "$1" 2>/dev/null | awk -v pat="$2" '
         /^[0-9a-f]+ <.*>:/ { f=$2 }
@@ -99,10 +98,10 @@ verify_isa() { # $1=binary  $2=variant
 # --- build each variant ------------------------------------------------------
 for v in "${VARIANTS[@]}"; do
     echo
-    echo "-------- building mm2plus.$v (${ARCH[$v]}) --------"
+    echo "-------- building mm2plus.$v (BASE=${BASE[$v]} SIMD=${ARCH[$v]}) --------"
     make clean >/dev/null 2>&1 || true
-    make -j SIMD_FLAGS="${ARCH[$v]}" CXX="$CXX_BIN" CC="$CC_BIN" \
-         BDYNAMIC= RELEASE_LDFLAGS="$STATIC_LDFLAGS"
+    make -j BASE_FLAGS="${BASE[$v]}" SIMD_FLAGS="${ARCH[$v]}" CXX="$CXX_BIN" CC="$CC_BIN" \
+         BDYNAMIC="" RELEASE_LDFLAGS="$STATIC_LDFLAGS"
     cp -f mm2plus "$OUT_DIR/mm2plus.$v"
     verify_static "$OUT_DIR/mm2plus.$v"
     verify_isa    "$OUT_DIR/mm2plus.$v" "$v"
@@ -115,7 +114,6 @@ echo "-------- building dispatcher mm2plus --------"
 verify_static "$OUT_DIR/mm2plus"
 
 # --- pack the release tarball (flat layout, matching upstream releases) -------
-# Version tag v1.3 -> tarball mm2-plus-1.3_x64-linux.tar.bz2
 VER_NUM="${VERSION#v}"
 TARBALL="$SCRIPT_DIR/mm2-plus-${VER_NUM}_x64-linux.tar.bz2"
 echo
